@@ -52,7 +52,7 @@ class Offer(db.Model):
         db.CheckConstraint(func.array_ndims(debtor_amounts) == 1),
         db.CheckConstraint(func.cardinality(debtor_ids) == func.cardinality(debtor_amounts)),
         {
-            'comment': 'Represents a  proposal to supply some goods or services for a given price.'
+            'comment': 'Represents a proposal to supply some goods or services for a given price.'
         }
     )
 
