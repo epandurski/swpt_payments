@@ -38,7 +38,7 @@ class Offer(db.Model):
                 'corresponding amount. The payer is expected to transfer one of the amounts '
                 'corresponding to the chosen debtor. Also note that the database schema allows '
                 'some or all of the `debtor_amounts` elements to be `None` or a negative '
-                'number, which should be handled as if they were zeros. ',
+                'number, which should be handled as if they were zeros.',
     )
     offer_deadline_ts = db.Column(
         db.TIMESTAMP(timezone=True),
