@@ -35,7 +35,7 @@ class Offer(db.Model):
         comment='Each element in this array must have a corresponding element in the '
                 '`debtor_ids` array. Note that the database schema allows one debtor ID to '
                 'occur more than once in the `debtor_ids` array, each time with a different '
-                'corresponding amount. The payer is expected to transfer one of the amounts  '
+                'corresponding amount. The payer is expected to transfer one of the amounts '
                 'corresponding to the chosen debtor. Also note that the database schema allows '
                 'some or all of the `debtor_amounts` elements to be `None` or a negative '
                 'number, which should be handled as if they were zeros. ',
