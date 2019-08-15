@@ -147,7 +147,7 @@ class CreatedOfferSignal(Signal):
     payee_announcement_id = db.Column(db.BigInteger, primary_key=True)
 
     # These fields are taken from `Offer`.
-    offer_key = db.Column(pg.BYTEA(length=16), primary_key=True)
+    offer_key = db.Column(pg.BYTEA(length=16), nullable=False)
     debtor_ids = db.Column(pg.ARRAY(db.BigInteger, dimensions=1), nullable=False)
     debtor_amounts = db.Column(pg.ARRAY(db.BigInteger, dimensions=1), nullable=False)
     valid_until_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=True)
@@ -163,7 +163,7 @@ class SuccessfulPaymentSignal(Signal):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
     payer_order_id = db.Column(db.BigInteger, primary_key=True)
-    offer_key = db.Column(pg.BYTEA(length=16), primary_key=True)
+    offer_key = db.Column(pg.BYTEA(length=16), nullable=False)
 
     # These fields are taken from `PaymentProof`.
     proof_key = db.Column(pg.BYTEA(length=16), nullable=False)
