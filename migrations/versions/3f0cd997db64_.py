@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 0f57b028e0d7
+Revision ID: 3f0cd997db64
 Revises: 
-Create Date: 2019-08-15 18:54:12.282140
+Create Date: 2019-08-15 21:54:27.664014
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '0f57b028e0d7'
+revision = '3f0cd997db64'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -25,19 +25,20 @@ def upgrade():
     )
     op.create_table('created_offer_signal',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
-    sa.Column('payee_announcement_id', sa.BigInteger(), nullable=False),
     sa.Column('offer_key', postgresql.BYTEA(length=16), nullable=False),
+    sa.Column('payee_announcement_id', sa.BigInteger(), nullable=False),
     sa.Column('status', sa.SmallInteger(), nullable=False),
     sa.Column('created_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
-    sa.PrimaryKeyConstraint('payee_creditor_id', 'payee_announcement_id')
+    sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_key')
     )
     op.create_table('failed_payment_signal',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
+    sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('payer_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('payer_order_id', sa.BigInteger(), nullable=False),
     sa.Column('offer_key', postgresql.BYTEA(length=16), nullable=False),
     sa.Column('details', postgresql.JSON(astext_type=sa.Text()), nullable=False),
-    sa.PrimaryKeyConstraint('payee_creditor_id', 'payer_creditor_id', 'payer_order_id')
+    sa.PrimaryKeyConstraint('payee_creditor_id', 'signal_id')
     )
     op.create_table('offer',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False, comment='The payee, also the one that is responsible to supply the goods or services.'),

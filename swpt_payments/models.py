@@ -152,10 +152,10 @@ class PaymentProof(db.Model):
 
 class CreatedOfferSignal(Signal):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    payee_announcement_id = db.Column(db.BigInteger, primary_key=True)
+    offer_key = db.Column(pg.BYTEA(length=16), primary_key=True)
+    payee_announcement_id = db.Column(db.BigInteger, nullable=False)
 
     # These fields are taken from `Offer`.
-    offer_key = db.Column(pg.BYTEA(length=16), nullable=False)
     status = db.Column(db.SmallInteger, nullable=False)
     created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
@@ -180,7 +180,8 @@ class SuccessfulPaymentSignal(Signal):
 
 class FailedPaymentSignal(Signal):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    payer_order_id = db.Column(db.BigInteger, primary_key=True)
+    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    payer_creditor_id = db.Column(db.BigInteger, nullable=False)
+    payer_order_id = db.Column(db.BigInteger, nullable=False)
     offer_key = db.Column(pg.BYTEA(length=16), nullable=False)
     details = db.Column(pg.JSON, nullable=False, default={})
