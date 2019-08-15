@@ -47,7 +47,7 @@ class Offer(db.Model):
         comment='The payee, also the one that is responsible to supply the goods or services.',
     )
     offer_key = db.Column(
-        pg.BYTEA(length=18),
+        pg.BYTEA(length=16),
         primary_key=True,
         comment='A random sequence of bytes. Along with `payee_creditor_id` uniquely identifies '
                 'the offer. Should be impossible to guess.',
@@ -83,7 +83,7 @@ class Offer(db.Model):
     )
     created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
     __table_args__ = (
-        db.CheckConstraint(func.length(offer_key) == 18),
+        db.CheckConstraint(func.length(offer_key) == 16),
         db.CheckConstraint(func.array_ndims(debtor_ids) == 1),
         db.CheckConstraint(func.array_ndims(debtor_amounts) == 1),
         db.CheckConstraint(func.cardinality(debtor_ids) == func.cardinality(debtor_amounts)),
@@ -100,7 +100,7 @@ class PaymentProof(db.Model):
         comment='The payee, also the one that is responsible to supply the goods or services.',
     )
     proof_key = db.Column(
-        pg.BYTEA(length=18),
+        pg.BYTEA(length=16),
         primary_key=True,
         comment='A random sequence of bytes. Along with `payee_creditor_id` uniquely identifies '
                 'the payment proof. Should be impossible to guess.',
@@ -129,7 +129,7 @@ class PaymentProof(db.Model):
     )
     paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
     __table_args__ = (
-        db.CheckConstraint(func.length(proof_key) == 18),
+        db.CheckConstraint(func.length(proof_key) == 16),
         db.CheckConstraint(amount >= 0),
         {
             'comment': 'Represents an evidence that a payment has been made to an offer. '
@@ -138,42 +138,43 @@ class PaymentProof(db.Model):
     )
 
 
-# TODO: PreparedTransfer, include `offer_request_id` in the generated `offer_key`.
+# TODO: PreparedTransfer?
+# TODO: Document that `offer_request_id` is included in the generated `offer_key`.
 
 
 class CreatedOfferSignal(Signal):
     # These fields are taken from `Offer`.
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    offer_key = db.Column(pg.BYTEA(length=18), primary_key=True)
+    offer_key = db.Column(pg.BYTEA(length=16), primary_key=True)
+    debtor_ids = db.Column(pg.ARRAY(db.BigInteger, dimensions=1), nullable=False)
+    debtor_amounts = db.Column(pg.ARRAY(db.BigInteger, dimensions=1), nullable=False)
     valid_until_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=True)
     created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
     offer_request_id = db.Column(db.BigInteger, nullable=False)
-    details = db.Column(pg.JSON, nullable=False, default={})
 
 
 class CanceledOfferSignal(Signal):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    offer_key = db.Column(pg.BYTEA(length=18), primary_key=True)
+    offer_key = db.Column(pg.BYTEA(length=16), primary_key=True)
 
 
-class PaidOfferSignal(Signal):
+class SuccessfulPaymentSignal(Signal):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    offer_key = db.Column(pg.BYTEA(length=18), primary_key=True)
-    payer_payment_order_id = db.Column(db.BigInteger, nullable=False)
+    payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
+    payer_order_id = db.Column(db.BigInteger, primary_key=True)
+    offer_key = db.Column(pg.BYTEA(length=16), primary_key=True)
 
     # These fields are taken from `PaymentProof`.
-    proof_key = db.Column(pg.BYTEA(length=18), nullable=False)
-    payer_creditor_id = db.Column(db.BigInteger, nullable=False)
+    proof_key = db.Column(pg.BYTEA(length=16), nullable=False)
     debtor_id = db.Column(db.BigInteger, nullable=False)
     amount = db.Column(db.BigInteger, nullable=False)
     paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
 
-class FailedPaymentSignal(Signal):  # TODO: improve?
+class FailedPaymentSignal(Signal):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    payer_creditor_id = db.Column(db.BigInteger, nullable=False)
-    payer_payment_order_id = db.Column(db.BigInteger, nullable=False)
-    offer_key = db.Column(pg.BYTEA(length=18), nullable=False)
+    payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
+    payer_order_id = db.Column(db.BigInteger, primary_key=True)
+    offer_key = db.Column(pg.BYTEA(length=16), nullable=False)
     details = db.Column(pg.JSON, nullable=False, default={})
