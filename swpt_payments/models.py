@@ -139,19 +139,19 @@ class PaymentProof(db.Model):
 
 
 # TODO: PreparedTransfer?
-# TODO: Document that `offer_request_id` is included in the generated `offer_key`.
+# TODO: Document that `offer_announcement_id` is included in the generated `offer_key`.
 
 
 class CreatedOfferSignal(Signal):
-    # These fields are taken from `Offer`.
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
+    payee_announcement_id = db.Column(db.BigInteger, primary_key=True)
+
+    # These fields are taken from `Offer`.
     offer_key = db.Column(pg.BYTEA(length=16), primary_key=True)
     debtor_ids = db.Column(pg.ARRAY(db.BigInteger, dimensions=1), nullable=False)
     debtor_amounts = db.Column(pg.ARRAY(db.BigInteger, dimensions=1), nullable=False)
     valid_until_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=True)
     created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
-
-    offer_request_id = db.Column(db.BigInteger, nullable=False)
 
 
 class CanceledOfferSignal(Signal):

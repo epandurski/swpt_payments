@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: ca26690eafa2
+Revision ID: 16e0a902a9a3
 Revises: 
-Create Date: 2019-08-15 18:29:31.118282
+Create Date: 2019-08-15 18:37:08.135492
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'ca26690eafa2'
+revision = '16e0a902a9a3'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -25,13 +25,13 @@ def upgrade():
     )
     op.create_table('created_offer_signal',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
+    sa.Column('payee_announcement_id', sa.BigInteger(), nullable=False),
     sa.Column('offer_key', postgresql.BYTEA(length=16), nullable=False),
     sa.Column('debtor_ids', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=False),
     sa.Column('debtor_amounts', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=False),
     sa.Column('valid_until_ts', sa.TIMESTAMP(timezone=True), nullable=True),
     sa.Column('created_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
-    sa.Column('offer_request_id', sa.BigInteger(), nullable=False),
-    sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_key')
+    sa.PrimaryKeyConstraint('payee_creditor_id', 'payee_announcement_id', 'offer_key')
     )
     op.create_table('failed_payment_signal',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
