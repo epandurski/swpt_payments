@@ -147,7 +147,9 @@ class PaymentProof(db.Model):
 
 
 # TODO: PreparedTransfer?
-# TODO: Document that `offer_announcement_id` is included in the generated `offer_key`.
+# TODO: Add `offer_id` and `offer_secret_key` column to Offer.
+# TODO: Add `proof_id` and `proof_secret_key` column to PaymentProof.
+# TODO: Add `payment_secret` to SuccessfulPaymentSignal.
 
 
 class CreatedOfferSignal(Signal):
