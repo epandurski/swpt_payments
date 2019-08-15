@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: bd24035a6998
+Revision ID: 0f57b028e0d7
 Revises: 
-Create Date: 2019-08-15 18:39:43.375833
+Create Date: 2019-08-15 18:54:12.282140
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'bd24035a6998'
+revision = '0f57b028e0d7'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -27,9 +27,7 @@ def upgrade():
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('payee_announcement_id', sa.BigInteger(), nullable=False),
     sa.Column('offer_key', postgresql.BYTEA(length=16), nullable=False),
-    sa.Column('debtor_ids', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=False),
-    sa.Column('debtor_amounts', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=False),
-    sa.Column('valid_until_ts', sa.TIMESTAMP(timezone=True), nullable=True),
+    sa.Column('status', sa.SmallInteger(), nullable=False),
     sa.Column('created_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'payee_announcement_id')
     )
@@ -47,6 +45,7 @@ def upgrade():
     sa.Column('description', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='A more or less detailed description of the offer.'),
     sa.Column('debtor_ids', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=False, comment='The payment should go through one of these debtors. Each element in this array must have a corresponding element in the `debtor_amounts` array. Note thatthe database schema allows some or all of the elements to be `None`, which should be handled with care.'),
     sa.Column('debtor_amounts', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=False, comment='Each element in this array must have a corresponding element in the `debtor_ids` array. Note that the database schema allows one debtor ID to occur more than once in the `debtor_ids` array, each time with a different corresponding amount. The payer is expected to transfer one of the amounts corresponding to the chosen debtor. Also note that the database schema allows some or all of the `debtor_amounts` elements to be `None` or a negative number, which should be handled as if they were zeros.'),
+    sa.Column('status', sa.SmallInteger(), nullable=False, comment='Additional offer status flags.'),
     sa.Column('valid_until_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The offer will not be valid after this deadline.'),
     sa.Column('created_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.CheckConstraint('array_ndims(debtor_amounts) = 1'),
