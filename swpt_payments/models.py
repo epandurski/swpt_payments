@@ -41,18 +41,22 @@ class Signal(db.Model):
 
 
 class Offer(db.Model):
-    creditor_id = db.Column(
+    payee_creditor_id = db.Column(
         db.BigInteger,
         primary_key=True,
         comment='The payee, also the one that is responsible to supply the goods or services.',
     )
-    offer_id = db.Column(
+    offer_key = db.Column(
         pg.BYTEA(length=12),
         primary_key=True,
-        comment='A random sequence of bytes. Along with `creditor_id` uniquely identifies the '
-                'offer. Should be impossible to guess.',
+        comment='A random sequence of bytes. Along with `payee_creditor_id` uniquely identifies '
+                'the offer. Should be impossible to guess.',
     )
-    details = db.Column(pg.JSON, nullable=False)
+    description = db.Column(
+        pg.JSON,
+        nullable=False,
+        comment='A more or less detailed description of the offer.',
+    )
     debtor_ids = db.Column(
         pg.ARRAY(db.BigInteger, dimensions=1),
         nullable=False,
@@ -79,22 +83,67 @@ class Offer(db.Model):
     )
     created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
     __table_args__ = (
-        db.CheckConstraint(func.length(offer_id) == 12),
+        db.CheckConstraint(func.length(offer_key) == 12),
         db.CheckConstraint(func.array_ndims(debtor_ids) == 1),
         db.CheckConstraint(func.array_ndims(debtor_amounts) == 1),
         db.CheckConstraint(func.cardinality(debtor_ids) == func.cardinality(debtor_amounts)),
         {
-            'comment': 'Represents a proposal to supply some goods or services for a given price.'
+            'comment': 'Represents an offer to supply some goods or services for a stated price.',
         }
     )
 
 
-# TODO: Payment, PreparedTransfer
+class PaymentProof(db.Model):
+    payee_creditor_id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        comment='The payee, also the one that is responsible to supply the goods or services.',
+    )
+    proof_key = db.Column(
+        pg.BYTEA(length=12),
+        primary_key=True,
+        comment='A random sequence of bytes. Along with `payee_creditor_id` uniquely identifies '
+                'the payment proof. Should be impossible to guess.',
+    )
+    payer_creditor_id = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='The payer.',
+    )
+    description = db.Column(
+        pg.JSON,
+        nullable=False,
+        comment='An exact copy of the `offer.description` column.',
+    )
+    debtor_id = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='The ID of the debtor through which the payment went. Must be one of the values '
+                'in the `offer.debtor_ids` array.',
+    )
+    amount = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='The transferred amount. Must be equal to the corresponding value in the '
+                '`offer.debtor_amounts` array.',
+    )
+    paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
+    __table_args__ = (
+        db.CheckConstraint(func.length(proof_key) == 12),
+        db.CheckConstraint(amount >= 0),
+        {
+            'comment': 'Represents an evidence that a payment has been made to an offer. '
+                       '(The corresponding offer is deleted.)',
+        }
+    )
+
+
+# TODO: PreparedTransfer
 
 
 class CreatedOfferSignal(Signal):
-    creditor_id = db.Column(db.BigInteger, primary_key=True)
-    offer_id = db.Column(pg.BYTEA(length=12), primary_key=True)
+    payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
+    offer_key = db.Column(pg.BYTEA(length=12), primary_key=True)
     offer_request_id = db.Column(db.BigInteger, nullable=False)
     created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
-    issues = db.Column(pg.JSON, nullable=False, default={})
+    details = db.Column(pg.JSON, nullable=False, default={})
