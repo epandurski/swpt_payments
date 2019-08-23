@@ -182,18 +182,17 @@ class CanceledOfferSignal(Signal):
 
 
 class SuccessfulPaymentSignal(Signal):
-    payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    payer_creditor_id = db.Column(db.BigInteger, nullable=False)
-    payer_order_id = db.Column(db.BigInteger, nullable=False)
-    offer_id = db.Column(db.BigInteger, nullable=False)
-
     # These fields are taken from `PaymentProof`.
-    proof_id = db.Column(db.BigInteger, nullable=False)
+    payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
+    proof_id = db.Column(db.BigInteger, primary_key=True)
     proof_secret = db.Column(pg.BYTEA, nullable=False)
+    payer_creditor_id = db.Column(db.BigInteger, nullable=False)
     debtor_id = db.Column(db.BigInteger, nullable=False)
     amount = db.Column(db.BigInteger, nullable=False)
     paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
+
+    payer_order_id = db.Column(db.BigInteger, nullable=False)
+    offer_id = db.Column(db.BigInteger, nullable=False)
 
 
 class FailedPaymentSignal(Signal):
