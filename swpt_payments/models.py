@@ -1,7 +1,7 @@
 import datetime
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
-from sqlalchemy.sql.expression import func
+from sqlalchemy.sql.expression import func, null, or_
 from .extensions import db, broker, MAIN_EXCHANGE_NAME
 
 
@@ -60,11 +60,6 @@ class Offer(db.Model):
         comment='A random sequence of bytes that the potential payer should know in order to '
                 'view the offer or make a payment.',
     )
-    description = db.Column(
-        pg.JSON,
-        nullable=False,
-        comment='A more or less detailed description of the offer.',
-    )
     debtor_ids = db.Column(
         pg.ARRAY(db.BigInteger, dimensions=1),
         nullable=False,
@@ -84,6 +79,20 @@ class Offer(db.Model):
                 'some or all of the `debtor_amounts` elements to be `None` or a negative '
                 'number, which should be handled as if they were zeros.',
     )
+    description = db.Column(
+        pg.JSON,
+        comment='A more or less detailed description of the goods or services that will be '
+                'supplied if a payment is made to the offer. `NULL` means that the payee will '
+                'compensate the payer by making a reciprocal payment.',
+    )
+    reciprocal_payment_debtor_id = db.Column(
+        db.BigInteger,
+        comment='The ID of the debtor through which the reciprocal payment will go.',
+    )
+    reciprocal_payment_amount = db.Column(
+        db.BigInteger,
+        comment='The amount to be transferred in the reciprocate payment.',
+    )
     status = db.Column(
         db.SmallInteger,
         nullable=False,
@@ -92,7 +101,6 @@ class Offer(db.Model):
     )
     valid_until_ts = db.Column(
         db.TIMESTAMP(timezone=True),
-        nullable=True,
         comment='The offer will not be valid after this deadline.'
     )
     created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
@@ -100,6 +108,15 @@ class Offer(db.Model):
         db.CheckConstraint(func.array_ndims(debtor_ids) == 1),
         db.CheckConstraint(func.array_ndims(debtor_amounts) == 1),
         db.CheckConstraint(func.cardinality(debtor_ids) == func.cardinality(debtor_amounts)),
+        db.CheckConstraint(reciprocal_payment_amount >= 0),
+        db.CheckConstraint(or_(
+            description == null(),
+            reciprocal_payment_debtor_id == null(),
+        )),
+        db.CheckConstraint(or_(
+            reciprocal_payment_amount != null(),
+            reciprocal_payment_debtor_id == null(),
+        )),
         {
             'comment': 'Represents an offer to supply some goods or services for a stated price.',
         }
@@ -129,7 +146,7 @@ class PaymentProof(db.Model):
         nullable=False,
         comment='The payer.',
     )
-    description = db.Column(
+    offer_description = db.Column(
         pg.JSON,
         nullable=False,
         comment='An exact copy of the `offer.description` column.',
@@ -161,7 +178,7 @@ class PaymentProof(db.Model):
 class PaymentOrder(db.Model):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
-    payer_order_id = db.Column(db.BigInteger, primary_key=True)
+    payer_payment_order_id = db.Column(db.BigInteger, primary_key=True)
 
     # TODO: PreparedTransfers
 
@@ -182,23 +199,28 @@ class CanceledOfferSignal(Signal):
 
 
 class SuccessfulPaymentSignal(Signal):
-    # These fields are taken from `PaymentProof`.
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    proof_id = db.Column(db.BigInteger, primary_key=True)
-    proof_secret = db.Column(pg.BYTEA, nullable=False)
+    successful_payment_signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    offer_id = db.Column(db.BigInteger, nullable=False)
     payer_creditor_id = db.Column(db.BigInteger, nullable=False)
+    payer_payment_order_id = db.Column(db.BigInteger, nullable=False)
     debtor_id = db.Column(db.BigInteger, nullable=False)
     amount = db.Column(db.BigInteger, nullable=False)
     paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
-
-    payer_order_id = db.Column(db.BigInteger, nullable=False)
-    offer_id = db.Column(db.BigInteger, nullable=False)
+    proof_id = db.Column(db.BigInteger)
+    proof_secret = db.Column(pg.BYTEA)
+    __table_args__ = (
+        db.CheckConstraint(or_(
+            proof_secret != null(),
+            proof_id == null(),
+        )),
+    )
 
 
 class FailedPaymentSignal(Signal):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    payer_creditor_id = db.Column(db.BigInteger, nullable=False)
-    payer_order_id = db.Column(db.BigInteger, nullable=False)
+    failed_payment_signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     offer_id = db.Column(db.BigInteger, nullable=False)
+    payer_creditor_id = db.Column(db.BigInteger, nullable=False)
+    payer_payment_order_id = db.Column(db.BigInteger, nullable=False)
     details = db.Column(pg.JSON, nullable=False, default={})
