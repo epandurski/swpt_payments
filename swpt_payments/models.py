@@ -81,8 +81,8 @@ class FormalOffer(db.Model):
         pg.JSON,
         comment='A more or less detailed description of the goods or services that will be '
                 'supplied if a payment is made to the offer. `NULL` means that the payee will '
-                'compensate the payer by making a reciprocal payment. In this case, and only '
-                'in this case, the `reciprocal_payment_debtor_id` column can be set to a '
+                'compensate the payer by an automated reciprocal payment. In this case, and '
+                'only in this case, the `reciprocal_payment_debtor_id` column can be set to a '
                 'non-NULL value.',
     )
     reciprocal_payment_debtor_id = db.Column(
@@ -145,26 +145,27 @@ class PaymentProof(db.Model):
     offer_description = db.Column(
         pg.JSON,
         nullable=False,
-        comment='An exact copy of the `formal_offer.description` column.',
+        comment='An exact copy of the `formal_offer.description` column. Note that this can not be '
+                '`NULL` because payment proofs are not generated for offers with no description.',
     )
     debtor_id = db.Column(
         db.BigInteger,
         nullable=False,
         comment='The ID of the debtor through which the payment went. Must be one of the values '
-                'in the `offer.debtor_ids` array.',
+                'in the `formal_offer.debtor_ids` array.',
     )
     amount = db.Column(
         db.BigInteger,
         nullable=False,
         comment='The transferred amount. Must be equal to the corresponding value in the '
-                '`offer.debtor_amounts` array.',
+                '`formal_offer.debtor_amounts` array.',
     )
     paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
     __table_args__ = (
         db.CheckConstraint(amount >= 0),
         {
             'comment': 'Represents an evidence that a payment has been made to an offer. '
-                       '(The corresponding offer is deleted.)',
+                       '(The corresponding offer has been deleted.)',
         }
     )
 
