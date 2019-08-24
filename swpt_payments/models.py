@@ -179,11 +179,9 @@ class PaymentOrder(db.Model):
 
 
 class CreatedFormalOfferSignal(Signal):
-    # These fields are taken from `FormalOffer`.
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
     created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
-
     payee_offer_announcement_id = db.Column(db.BigInteger, nullable=False)
 
 
@@ -194,7 +192,7 @@ class CanceledFormalOfferSignal(Signal):
 
 class SuccessfulPaymentSignal(Signal):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    successful_payment_signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    payment_signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     offer_id = db.Column(db.BigInteger, nullable=False)
     payer_creditor_id = db.Column(db.BigInteger, nullable=False)
     payer_payment_order_id = db.Column(db.BigInteger, nullable=False)
@@ -213,7 +211,7 @@ class SuccessfulPaymentSignal(Signal):
 
 class FailedPaymentSignal(Signal):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    failed_payment_signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    failure_signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     offer_id = db.Column(db.BigInteger, nullable=False)
     payer_creditor_id = db.Column(db.BigInteger, nullable=False)
     payer_payment_order_id = db.Column(db.BigInteger, nullable=False)

@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 7deef16cc16b
+Revision ID: f0cbf7af2730
 Revises: 
-Create Date: 2019-08-24 15:24:01.901486
+Create Date: 2019-08-24 15:55:04.738758
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '7deef16cc16b'
+revision = 'f0cbf7af2730'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -32,12 +32,12 @@ def upgrade():
     )
     op.create_table('failed_payment_signal',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
-    sa.Column('failed_payment_signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
+    sa.Column('failure_signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('offer_id', sa.BigInteger(), nullable=False),
     sa.Column('payer_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('payer_payment_order_id', sa.BigInteger(), nullable=False),
     sa.Column('details', postgresql.JSON(astext_type=sa.Text()), nullable=False),
-    sa.PrimaryKeyConstraint('payee_creditor_id', 'failed_payment_signal_id')
+    sa.PrimaryKeyConstraint('payee_creditor_id', 'failure_signal_id')
     )
     op.create_table('formal_offer',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False, comment='The payee, also the one that is responsible to supply the goods or services.'),
@@ -80,7 +80,7 @@ def upgrade():
     )
     op.create_table('successful_payment_signal',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
-    sa.Column('successful_payment_signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
+    sa.Column('payment_signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('offer_id', sa.BigInteger(), nullable=False),
     sa.Column('payer_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('payer_payment_order_id', sa.BigInteger(), nullable=False),
@@ -90,7 +90,7 @@ def upgrade():
     sa.Column('proof_id', sa.BigInteger(), nullable=True),
     sa.Column('proof_secret', postgresql.BYTEA(), nullable=True),
     sa.CheckConstraint('proof_secret IS NOT NULL OR proof_id IS NULL'),
-    sa.PrimaryKeyConstraint('payee_creditor_id', 'successful_payment_signal_id')
+    sa.PrimaryKeyConstraint('payee_creditor_id', 'payment_signal_id')
     )
     # ### end Alembic commands ###
 
