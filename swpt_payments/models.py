@@ -168,8 +168,6 @@ class PaymentProof(db.Model):
         }
     )
 
-    # TODO: Add swapping columns?
-
 
 class PaymentOrder(db.Model):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
