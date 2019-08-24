@@ -74,8 +74,8 @@ class FormalOffer(db.Model):
                 'occur more than once in the `debtor_ids` array, each time with a different '
                 'corresponding amount. The payer is expected to transfer one of the amounts '
                 'corresponding to the chosen debtor. Also note that the database schema allows '
-                'some or all of the `debtor_amounts` elements to be `None` or a negative '
-                'number, which should be handled as if they were zeros.',
+                'some or all of the `debtor_amounts` elements to be `None` or negative '
+                'numbers, which should be handled as if they were zeros.',
     )
     description = db.Column(
         pg.JSON,
