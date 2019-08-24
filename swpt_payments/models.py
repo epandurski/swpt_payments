@@ -153,7 +153,7 @@ class PaymentProof(db.Model):
     offer_description = db.Column(
         pg.JSON,
         nullable=False,
-        comment='An exact copy of the `offer.description` column.',
+        comment='An exact copy of the `formal_offer.description` column.',
     )
     debtor_id = db.Column(
         db.BigInteger,
