@@ -40,7 +40,7 @@ class Signal(db.Model):
         broker.publish_message(message, exchange=MAIN_EXCHANGE_NAME, routing_key=routing_key)
 
 
-class Offer(db.Model):
+class FormalOffer(db.Model):
     STATUS_INVALID_FLAG = 1
 
     payee_creditor_id = db.Column(
@@ -83,7 +83,9 @@ class Offer(db.Model):
         pg.JSON,
         comment='A more or less detailed description of the goods or services that will be '
                 'supplied if a payment is made to the offer. `NULL` means that the payee will '
-                'compensate the payer by making a reciprocal payment.',
+                'compensate the payer by making a reciprocal payment. In this case (and only '
+                'in this case) `reciprocal_payment_debtor_id` and `reciprocal_payment_amount` '
+                'columns can be set to non-NULL values.',
     )
     reciprocal_payment_debtor_id = db.Column(
         db.BigInteger,
@@ -91,6 +93,8 @@ class Offer(db.Model):
     )
     reciprocal_payment_amount = db.Column(
         db.BigInteger,
+        nullable=False,
+        server_default=db.text('0'),
         comment='The amount to be transferred in the reciprocate payment.',
     )
     status = db.Column(
@@ -108,15 +112,15 @@ class Offer(db.Model):
         db.CheckConstraint(func.array_ndims(debtor_ids) == 1),
         db.CheckConstraint(func.array_ndims(debtor_amounts) == 1),
         db.CheckConstraint(func.cardinality(debtor_ids) == func.cardinality(debtor_amounts)),
-        db.CheckConstraint(reciprocal_payment_amount >= 0),
         db.CheckConstraint(or_(
             description == null(),
             reciprocal_payment_debtor_id == null(),
         )),
         db.CheckConstraint(or_(
-            reciprocal_payment_amount != null(),
-            reciprocal_payment_debtor_id == null(),
+            reciprocal_payment_debtor_id != null(),
+            reciprocal_payment_amount == 0,
         )),
+        db.CheckConstraint(reciprocal_payment_amount >= 0),
         {
             'comment': 'Represents an offer to supply some goods or services for a stated price.',
         }
@@ -183,8 +187,8 @@ class PaymentOrder(db.Model):
     # TODO: PreparedTransfers
 
 
-class CreatedOfferSignal(Signal):
-    # These fields are taken from `Offer`.
+class CreatedFormalOfferSignal(Signal):
+    # These fields are taken from `FormalOffer`.
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
     status = db.Column(db.SmallInteger, nullable=False)
@@ -193,7 +197,7 @@ class CreatedOfferSignal(Signal):
     payee_offer_announcement_id = db.Column(db.BigInteger, nullable=False)
 
 
-class CanceledOfferSignal(Signal):
+class CanceledFormalOfferSignal(Signal):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
 
