@@ -83,9 +83,9 @@ class FormalOffer(db.Model):
         pg.JSON,
         comment='A more or less detailed description of the goods or services that will be '
                 'supplied if a payment is made to the offer. `NULL` means that the payee will '
-                'compensate the payer by making a reciprocal payment. In this case (and only '
-                'in this case) `reciprocal_payment_debtor_id` and `reciprocal_payment_amount` '
-                'columns can be set to non-NULL values.',
+                'compensate the payer by making a reciprocal payment. In this case, and only '
+                'in this case, the `reciprocal_payment_debtor_id` column can be set to a '
+                'non-NULL value.',
     )
     reciprocal_payment_debtor_id = db.Column(
         db.BigInteger,
