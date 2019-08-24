@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: f0cbf7af2730
+Revision ID: eaaa0d5d412d
 Revises: 
-Create Date: 2019-08-24 15:55:04.738758
+Create Date: 2019-08-24 21:10:17.836340
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'f0cbf7af2730'
+revision = 'eaaa0d5d412d'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -70,10 +70,12 @@ def upgrade():
     sa.Column('proof_id', sa.BigInteger(), autoincrement=True, nullable=False, comment='Along with `payee_creditor_id` uniquely identifies the payment proof.'),
     sa.Column('proof_secret', postgresql.BYTEA(), nullable=False, comment='A random sequence of bytes that the interested party should know in order to view the payment proof.'),
     sa.Column('payer_creditor_id', sa.BigInteger(), nullable=False, comment='The payer.'),
-    sa.Column('offer_description', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='An exact copy of the `formal_offer.description` column. Note that this can not be `NULL` because payment proofs are not generated for offers with no description.'),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False, comment='The ID of the debtor through which the payment went. Must be one of the values in the `formal_offer.debtor_ids` array.'),
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The transferred amount. Must be equal to the corresponding value in the `formal_offer.debtor_amounts` array.'),
     sa.Column('paid_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('offer_id', sa.BigInteger(), nullable=False, comment='An exact copy of the `formal_offer.offer_id` column.'),
+    sa.Column('offer_created_at_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='An exact copy of the `formal_offer.created_at_ts` column.'),
+    sa.Column('offer_description', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='An exact copy of the `formal_offer.description` column. Note that this can not be `NULL` because payment proofs are not generated for offers with no description.'),
     sa.CheckConstraint('amount >= 0'),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'proof_id'),
     comment='Represents an evidence that a payment has been made to an offer. (The corresponding offer has been deleted.)'

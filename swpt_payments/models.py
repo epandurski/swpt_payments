@@ -142,12 +142,6 @@ class PaymentProof(db.Model):
         nullable=False,
         comment='The payer.',
     )
-    offer_description = db.Column(
-        pg.JSON,
-        nullable=False,
-        comment='An exact copy of the `formal_offer.description` column. Note that this can not be '
-                '`NULL` because payment proofs are not generated for offers with no description.',
-    )
     debtor_id = db.Column(
         db.BigInteger,
         nullable=False,
@@ -160,7 +154,27 @@ class PaymentProof(db.Model):
         comment='The transferred amount. Must be equal to the corresponding value in the '
                 '`formal_offer.debtor_amounts` array.',
     )
-    paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
+    paid_at_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        nullable=False,
+        default=get_now_utc,
+    )
+    offer_id = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='An exact copy of the `formal_offer.offer_id` column.',
+    )
+    offer_created_at_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        nullable=False,
+        comment='An exact copy of the `formal_offer.created_at_ts` column.',
+    )
+    offer_description = db.Column(
+        pg.JSON,
+        nullable=False,
+        comment='An exact copy of the `formal_offer.description` column. Note that this can not be '
+                '`NULL` because payment proofs are not generated for offers with no description.',
+    )
     __table_args__ = (
         db.CheckConstraint(amount >= 0),
         {
