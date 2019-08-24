@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 37c7e727e6d1
+Revision ID: e7cc5d663501
 Revises: 
-Create Date: 2019-08-24 14:31:31.883160
+Create Date: 2019-08-24 15:02:08.525413
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '37c7e727e6d1'
+revision = 'e7cc5d663501'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -26,7 +26,6 @@ def upgrade():
     op.create_table('created_formal_offer_signal',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('offer_id', sa.BigInteger(), nullable=False),
-    sa.Column('status', sa.SmallInteger(), nullable=False),
     sa.Column('created_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('payee_offer_announcement_id', sa.BigInteger(), nullable=False),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_id')
@@ -46,10 +45,9 @@ def upgrade():
     sa.Column('offer_secret', postgresql.BYTEA(), nullable=False, comment='A random sequence of bytes that the potential payer should know in order to view the offer or make a payment.'),
     sa.Column('debtor_ids', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=False, comment='The payment should go through one of these debtors. Each element in this array must have a corresponding element in the `debtor_amounts` array. Note thatthe database schema allows some or all of the elements to be `None`, which should be handled with care.'),
     sa.Column('debtor_amounts', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=False, comment='Each element in this array must have a corresponding element in the `debtor_ids` array. Note that the database schema allows one debtor ID to occur more than once in the `debtor_ids` array, each time with a different corresponding amount. The payer is expected to transfer one of the amounts corresponding to the chosen debtor. Also note that the database schema allows some or all of the `debtor_amounts` elements to be `None` or a negative number, which should be handled as if they were zeros.'),
-    sa.Column('description', postgresql.JSON(astext_type=sa.Text()), nullable=True, comment='A more or less detailed description of the goods or services that will be supplied if a payment is made to the offer. `NULL` means that the payee will compensate the payer by making a reciprocal payment. In this case (and only in this case) `reciprocal_payment_debtor_id` and `reciprocal_payment_amount` columns can be set to non-NULL values.'),
+    sa.Column('description', postgresql.JSON(astext_type=sa.Text()), nullable=True, comment='A more or less detailed description of the goods or services that will be supplied if a payment is made to the offer. `NULL` means that the payee will compensate the payer by making a reciprocal payment. In this case, and only in this case, the `reciprocal_payment_debtor_id` column can be set to a non-NULL value.'),
     sa.Column('reciprocal_payment_debtor_id', sa.BigInteger(), nullable=True, comment='The ID of the debtor through which the reciprocal payment will go.'),
     sa.Column('reciprocal_payment_amount', sa.BigInteger(), server_default=sa.text('0'), nullable=False, comment='The amount to be transferred in the reciprocate payment.'),
-    sa.Column('status', sa.SmallInteger(), nullable=False, comment='Additional offer status flags.'),
     sa.Column('valid_until_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The offer will not be valid after this deadline.'),
     sa.Column('created_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.CheckConstraint('array_ndims(debtor_amounts) = 1'),
@@ -72,7 +70,7 @@ def upgrade():
     sa.Column('proof_id', sa.BigInteger(), autoincrement=True, nullable=False, comment='Along with `payee_creditor_id` uniquely identifies the payment proof.'),
     sa.Column('proof_secret', postgresql.BYTEA(), nullable=False, comment='A random sequence of bytes that the interested party should know in order to view the payment proof.'),
     sa.Column('payer_creditor_id', sa.BigInteger(), nullable=False, comment='The payer.'),
-    sa.Column('offer_description', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='An exact copy of the `offer.description` column.'),
+    sa.Column('offer_description', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='An exact copy of the `formal_offer.description` column.'),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False, comment='The ID of the debtor through which the payment went. Must be one of the values in the `offer.debtor_ids` array.'),
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The transferred amount. Must be equal to the corresponding value in the `offer.debtor_amounts` array.'),
     sa.Column('paid_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),

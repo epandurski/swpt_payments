@@ -41,8 +41,6 @@ class Signal(db.Model):
 
 
 class FormalOffer(db.Model):
-    STATUS_INVALID_FLAG = 1
-
     payee_creditor_id = db.Column(
         db.BigInteger,
         primary_key=True,
@@ -96,12 +94,6 @@ class FormalOffer(db.Model):
         nullable=False,
         server_default=db.text('0'),
         comment='The amount to be transferred in the reciprocate payment.',
-    )
-    status = db.Column(
-        db.SmallInteger,
-        nullable=False,
-        default=0,
-        comment='Additional offer status flags.',
     )
     valid_until_ts = db.Column(
         db.TIMESTAMP(timezone=True),
@@ -191,7 +183,6 @@ class CreatedFormalOfferSignal(Signal):
     # These fields are taken from `FormalOffer`.
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
-    status = db.Column(db.SmallInteger, nullable=False)
     created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
     payee_offer_announcement_id = db.Column(db.BigInteger, nullable=False)
