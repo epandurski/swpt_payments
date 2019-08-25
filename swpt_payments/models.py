@@ -233,7 +233,7 @@ class PaymentOrder(db.Model):
         }
     )
 
-    # TODO: PreparedTransfers
+    # TODO: Use sequence for the `payment_coordinator_request_id` column.
 
 
 class CreatedFormalOfferSignal(Signal):
