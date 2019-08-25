@@ -187,6 +187,7 @@ class PaymentProof(db.Model):
 class PaymentOrder(db.Model):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
+    payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
     payer_payment_order_id = db.Column(db.BigInteger, primary_key=True)
 
     # TODO: PreparedTransfers

@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: eaaa0d5d412d
+Revision ID: 846bce08426d
 Revises: 
-Create Date: 2019-08-24 21:10:17.836340
+Create Date: 2019-08-25 14:44:06.205804
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'eaaa0d5d412d'
+revision = '846bce08426d'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -62,8 +62,9 @@ def upgrade():
     op.create_table('payment_order',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('offer_id', sa.BigInteger(), nullable=False),
+    sa.Column('payer_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('payer_payment_order_id', sa.BigInteger(), nullable=False),
-    sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_id', 'payer_payment_order_id')
+    sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_id', 'payer_creditor_id', 'payer_payment_order_id')
     )
     op.create_table('payment_proof',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False, comment='The payee, also the one that is responsible to supply the goods or services.'),
