@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 9e1e82be2ca4
+Revision ID: 527a1665e56c
 Revises: 
-Create Date: 2019-08-26 02:05:33.995598
+Create Date: 2019-08-26 02:33:21.334521
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '9e1e82be2ca4'
+revision = '527a1665e56c'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -68,13 +68,11 @@ def upgrade():
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be equal to the corresponding value in the `formal_offer.debtor_amounts` array.'),
     sa.Column('payment_coordinator_request_id', sa.BigInteger(), nullable=False),
     sa.Column('payment_transfer_id', sa.BigInteger(), nullable=True),
-    sa.Column('payment_is_finalized', sa.Boolean(), nullable=False),
     sa.Column('reciprocal_payment_coordinator_request_id', sa.BigInteger(), nullable=True),
     sa.Column('reciprocal_payment_transfer_id', sa.BigInteger(), nullable=True),
-    sa.Column('reciprocal_payment_is_finalized', sa.Boolean(), nullable=False),
-    sa.CheckConstraint('payment_is_finalized IS false OR payment_transfer_id IS NOT NULL'),
+    sa.Column('is_finalized', sa.Boolean(), nullable=False),
+    sa.CheckConstraint('payment_transfer_id IS NOT NULL OR reciprocal_payment_coordinator_request_id IS NULL'),
     sa.CheckConstraint('reciprocal_payment_coordinator_request_id IS NOT NULL OR reciprocal_payment_transfer_id IS NULL'),
-    sa.CheckConstraint('reciprocal_payment_is_finalized IS false OR reciprocal_payment_transfer_id IS NOT NULL'),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_id', 'payer_creditor_id', 'payer_payment_order_id'),
     comment='A payment order that is currently being processed.'
     )

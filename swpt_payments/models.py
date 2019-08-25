@@ -203,10 +203,9 @@ class PaymentOrder(db.Model):
     )
     payment_coordinator_request_id = db.Column(db.BigInteger, nullable=False)
     payment_transfer_id = db.Column(db.BigInteger)
-    payment_is_finalized = db.Column(db.Boolean, nullable=False, default=False)
     reciprocal_payment_coordinator_request_id = db.Column(db.BigInteger)
     reciprocal_payment_transfer_id = db.Column(db.BigInteger)
-    reciprocal_payment_is_finalized = db.Column(db.Boolean, nullable=False, default=False)
+    is_finalized = db.Column(db.Boolean, nullable=False, default=False)
     __table_args__ = (
         db.Index(
             'idx_payment_coordinator_request_id',
@@ -222,12 +221,8 @@ class PaymentOrder(db.Model):
             postgresql_where=reciprocal_payment_coordinator_request_id != null(),
         ),
         db.CheckConstraint(or_(
-            payment_is_finalized.is_(False),
             payment_transfer_id != null(),
-        )),
-        db.CheckConstraint(or_(
-            reciprocal_payment_is_finalized.is_(False),
-            reciprocal_payment_transfer_id != null(),
+            reciprocal_payment_coordinator_request_id == null(),
         )),
         db.CheckConstraint(or_(
             reciprocal_payment_coordinator_request_id != null(),
