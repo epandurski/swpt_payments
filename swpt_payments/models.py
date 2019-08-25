@@ -189,6 +189,54 @@ class PaymentOrder(db.Model):
     offer_id = db.Column(db.BigInteger, primary_key=True)
     payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
     payer_payment_order_id = db.Column(db.BigInteger, primary_key=True)
+    debtor_id = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='The ID of the debtor through which the payment should go. Must be one of the '
+                'values in the `formal_offer.debtor_ids` array.',
+    )
+    amount = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='The amount to be transferred. Must be equal to the corresponding value in the '
+                '`formal_offer.debtor_amounts` array.',
+    )
+    payment_coordinator_request_id = db.Column(db.BigInteger, nullable=False)
+    payment_transfer_id = db.Column(db.BigInteger)
+    payment_is_finalized = db.Column(db.Boolean, nullable=False, default=False)
+    reciprocal_payment_coordinator_request_id = db.Column(db.BigInteger)
+    reciprocal_payment_transfer_id = db.Column(db.BigInteger)
+    reciprocal_payment_is_finalized = db.Column(db.Boolean, nullable=False, default=False)
+    __table_args__ = (
+        db.Index(
+            'idx_payment_coordinator_request_id',
+            payee_creditor_id,
+            payment_coordinator_request_id,
+            unique=True,
+        ),
+        db.Index(
+            'idx_reciprocal_payment_coordinator_request_id',
+            payee_creditor_id,
+            reciprocal_payment_coordinator_request_id,
+            unique=True,
+            postgresql_where=reciprocal_payment_coordinator_request_id != null(),
+        ),
+        db.CheckConstraint(or_(
+            payment_is_finalized.is_(False),
+            payment_transfer_id != null(),
+        )),
+        db.CheckConstraint(or_(
+            reciprocal_payment_is_finalized.is_(False),
+            reciprocal_payment_transfer_id != null(),
+        )),
+        db.CheckConstraint(or_(
+            reciprocal_payment_coordinator_request_id != null(),
+            reciprocal_payment_transfer_id == null(),
+        )),
+        {
+            'comment': 'A payment order that is currently being processed.',
+        }
+    )
 
     # TODO: PreparedTransfers
 
