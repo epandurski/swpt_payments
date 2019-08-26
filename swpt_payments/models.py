@@ -131,11 +131,11 @@ class PaymentOrder(db.Model):
         comment='The amount to be transferred in the payment. Must be equal to the corresponding '
                 'value in the `formal_offer.debtor_amounts` array.',
     )
-    payment_coordinator_request_seq = db.Sequence('seq_payment_coordinator_request_id', metadata=db.Model.metadata)
+    payment_coordinator_request_id_seq = db.Sequence('payment_coordinator_request_id_seq', metadata=db.Model.metadata)
     payment_coordinator_request_id = db.Column(
         db.BigInteger,
         nullable=False,
-        server_default=payment_coordinator_request_seq.next_value(),
+        server_default=payment_coordinator_request_id_seq.next_value(),
     )
     payment_transfer_id = db.Column(db.BigInteger)
     reciprocal_payment_coordinator_request_id = db.Column(db.BigInteger)

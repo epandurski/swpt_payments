@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 958582d09ce4
+Revision ID: cb56ede3a22c
 Revises: 953d40d6b4e6
-Create Date: 2019-08-26 17:58:03.150505
+Create Date: 2019-08-26 18:42:30.955792
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '958582d09ce4'
+revision = 'cb56ede3a22c'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -66,7 +66,7 @@ def upgrade():
     sa.Column('payer_payment_order_id', sa.BigInteger(), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False, comment='The ID of the debtor through which the payment should go. Must be one of the values in the `formal_offer.debtor_ids` array.'),
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred in the payment. Must be equal to the corresponding value in the `formal_offer.debtor_amounts` array.'),
-    sa.Column('payment_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('seq_payment_coordinator_request_id')"), nullable=False),
+    sa.Column('payment_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('payment_coordinator_request_id_seq')"), nullable=False),
     sa.Column('payment_transfer_id', sa.BigInteger(), nullable=True),
     sa.Column('reciprocal_payment_coordinator_request_id', sa.BigInteger(), nullable=True),
     sa.Column('reciprocal_payment_transfer_id', sa.BigInteger(), nullable=True),

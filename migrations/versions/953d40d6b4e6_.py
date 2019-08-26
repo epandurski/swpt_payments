@@ -18,8 +18,8 @@ depends_on = None
 
 
 def upgrade():
-    op.execute(CreateSequence(Sequence('seq_payment_coordinator_request_id')))
+    op.execute(CreateSequence(Sequence('payment_coordinator_request_id_seq')))
 
 
 def downgrade():
-    op.execute(DropSequence(Sequence('seq_payment_coordinator_request_id')))
+    op.execute(DropSequence(Sequence('payment_coordinator_request_id_seq')))
