@@ -144,10 +144,28 @@ class PaymentOrder(db.Model):
         db.BigInteger,
         nullable=False,
         server_default=payment_coordinator_request_id_seq.next_value(),
+        comment='This is the value of the `coordinator_request_id` parameter, which has been '
+                'sent with the `prepare_transfer` message for the payment. The value of '
+                '`payee_creditor_id` is sent as the `coordinator_id` parameter. '
+                '`coordinator_type` is "payment".',
     )
-    payment_transfer_id = db.Column(db.BigInteger)
-    reciprocal_payment_coordinator_request_id = db.Column(db.BigInteger)
-    reciprocal_payment_transfer_id = db.Column(db.BigInteger)
+    payment_transfer_id = db.Column(
+        db.BigInteger,
+        comment='This value, along with `debtor_id` and `payer_creditor_id` uniquely identifies '
+                'the prepared transfer for the payment.',
+    )
+    reciprocal_payment_coordinator_request_id = db.Column(
+        db.BigInteger,
+        comment='This is the value of the `coordinator_request_id` parameter, which has been '
+                'sent with the `prepare_transfer` message for the reciprocal payment. The value of '
+                '`payee_creditor_id` is sent as the `coordinator_id` parameter. '
+                '`coordinator_type` is "payment".',
+    )
+    reciprocal_payment_transfer_id = db.Column(
+        db.BigInteger,
+        comment='This value, along with `debtor_id` and `payee_creditor_id` uniquely identifies '
+                'the prepared transfer for the reciprocal payment.',
+    )
     finalized_at_ts = db.Column(db.TIMESTAMP(timezone=True))
     __table_args__ = (
         db.Index(
