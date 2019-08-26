@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 527a1665e56c
+Revision ID: 1c834fb2dd26
 Revises: 
-Create Date: 2019-08-26 02:33:21.334521
+Create Date: 2019-08-26 16:30:47.960918
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '527a1665e56c'
+revision = '1c834fb2dd26'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -41,7 +41,7 @@ def upgrade():
     )
     op.create_table('formal_offer',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False, comment='The payee, also the one that is responsible to supply the goods or services.'),
-    sa.Column('offer_id', sa.BigInteger(), autoincrement=True, nullable=False, comment='Along with `payee_creditor_id` uniquely identifies the offer.'),
+    sa.Column('offer_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('offer_secret', postgresql.BYTEA(), nullable=False, comment='A random sequence of bytes that the potential payer should know in order to view the offer or make a payment.'),
     sa.Column('debtor_ids', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=False, comment='The payment should go through one of these debtors. Each element in this array must have a corresponding element in the `debtor_amounts` array. Note thatthe database schema allows some or all of the elements to be `None`, which should be handled with care.'),
     sa.Column('debtor_amounts', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=False, comment='Each element in this array must have a corresponding element in the `debtor_ids` array. Note that the database schema allows one debtor ID to occur more than once in the `debtor_ids` array, each time with a different corresponding amount. The payer is expected to transfer one of the amounts corresponding to the chosen debtor. Also note that the database schema allows some or all of the `debtor_amounts` elements to be `None` or negative numbers, which should be handled as if they were zeros.'),
@@ -65,29 +65,29 @@ def upgrade():
     sa.Column('payer_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('payer_payment_order_id', sa.BigInteger(), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False, comment='The ID of the debtor through which the payment should go. Must be one of the values in the `formal_offer.debtor_ids` array.'),
-    sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be equal to the corresponding value in the `formal_offer.debtor_amounts` array.'),
+    sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred in the payment. Must be equal to the corresponding value in the `formal_offer.debtor_amounts` array.'),
     sa.Column('payment_coordinator_request_id', sa.BigInteger(), nullable=False),
     sa.Column('payment_transfer_id', sa.BigInteger(), nullable=True),
     sa.Column('reciprocal_payment_coordinator_request_id', sa.BigInteger(), nullable=True),
     sa.Column('reciprocal_payment_transfer_id', sa.BigInteger(), nullable=True),
-    sa.Column('is_finalized', sa.Boolean(), nullable=False),
+    sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True),
     sa.CheckConstraint('payment_transfer_id IS NOT NULL OR reciprocal_payment_coordinator_request_id IS NULL'),
     sa.CheckConstraint('reciprocal_payment_coordinator_request_id IS NOT NULL OR reciprocal_payment_transfer_id IS NULL'),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_id', 'payer_creditor_id', 'payer_payment_order_id'),
-    comment='A payment order that is currently being processed.'
+    comment='Represents a recent order from a payer to make a payment to an offer.'
     )
     op.create_index('idx_payment_coordinator_request_id', 'payment_order', ['payee_creditor_id', 'payment_coordinator_request_id'], unique=True)
     op.create_index('idx_reciprocal_payment_coordinator_request_id', 'payment_order', ['payee_creditor_id', 'reciprocal_payment_coordinator_request_id'], unique=True, postgresql_where=sa.text('reciprocal_payment_coordinator_request_id IS NOT NULL'))
     op.create_table('payment_proof',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False, comment='The payee, also the one that is responsible to supply the goods or services.'),
-    sa.Column('proof_id', sa.BigInteger(), autoincrement=True, nullable=False, comment='Along with `payee_creditor_id` uniquely identifies the payment proof.'),
+    sa.Column('proof_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('proof_secret', postgresql.BYTEA(), nullable=False, comment='A random sequence of bytes that the interested party should know in order to view the payment proof.'),
     sa.Column('payer_creditor_id', sa.BigInteger(), nullable=False, comment='The payer.'),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False, comment='The ID of the debtor through which the payment went. Must be one of the values in the `formal_offer.debtor_ids` array.'),
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The transferred amount. Must be equal to the corresponding value in the `formal_offer.debtor_amounts` array.'),
     sa.Column('paid_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
-    sa.Column('offer_id', sa.BigInteger(), nullable=False, comment='An exact copy of the `formal_offer.offer_id` column.'),
-    sa.Column('offer_created_at_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='An exact copy of the `formal_offer.created_at_ts` column.'),
+    sa.Column('offer_id', sa.BigInteger(), nullable=False),
+    sa.Column('offer_created_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('offer_description', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='An exact copy of the `formal_offer.description` column. Note that this can not be `NULL` because payment proofs are not generated for offers with no description.'),
     sa.CheckConstraint('amount >= 0'),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'proof_id'),
