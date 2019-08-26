@@ -115,10 +115,7 @@ class FormalOffer(db.Model):
 
 
 class PaymentOrder(db.Model):
-    _payment_coordinator_request_id_seq = db.Sequence(
-        'payment_coordinator_request_id_seq',
-        metadata=db.Model.metadata,
-    )
+    _pcr_seq = db.Sequence('payment_coordinator_request_id_seq', metadata=db.Model.metadata)
 
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
@@ -144,7 +141,7 @@ class PaymentOrder(db.Model):
     payment_coordinator_request_id = db.Column(
         db.BigInteger,
         nullable=False,
-        server_default=_payment_coordinator_request_id_seq.next_value(),
+        server_default=_pcr_seq.next_value(),
         comment='This is the value of the `coordinator_request_id` parameter, which has been '
                 'sent with the `prepare_transfer` message for the payment. The value of '
                 '`payee_creditor_id` is sent as the `coordinator_id` parameter. '
