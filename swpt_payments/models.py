@@ -46,12 +46,7 @@ class FormalOffer(db.Model):
         primary_key=True,
         comment='The payee, also the one that is responsible to supply the goods or services.',
     )
-    offer_id = db.Column(
-        db.BigInteger,
-        primary_key=True,
-        autoincrement=True,
-        comment='Along with `payee_creditor_id` uniquely identifies the offer.',
-    )
+    offer_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     offer_secret = db.Column(
         pg.BYTEA,
         nullable=False,
@@ -119,18 +114,68 @@ class FormalOffer(db.Model):
     )
 
 
+class PaymentOrder(db.Model):
+    payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
+    offer_id = db.Column(db.BigInteger, primary_key=True)
+    payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
+    payer_payment_order_id = db.Column(db.BigInteger, primary_key=True)
+    debtor_id = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='The ID of the debtor through which the payment should go. Must be one of the '
+                'values in the `formal_offer.debtor_ids` array.',
+    )
+    amount = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='The amount to be transferred in the payment. Must be equal to the corresponding '
+                'value in the `formal_offer.debtor_amounts` array.',
+    )
+    payment_coordinator_request_seq = db.Sequence('seq_payment_coordinator_request_id', metadata=db.Model.metadata)
+    payment_coordinator_request_id = db.Column(
+        db.BigInteger,
+        nullable=False,
+        server_default=payment_coordinator_request_seq.next_value(),
+    )
+    payment_transfer_id = db.Column(db.BigInteger)
+    reciprocal_payment_coordinator_request_id = db.Column(db.BigInteger)
+    reciprocal_payment_transfer_id = db.Column(db.BigInteger)
+    finalized_at_ts = db.Column(db.TIMESTAMP(timezone=True))
+    __table_args__ = (
+        db.Index(
+            'idx_payment_coordinator_request_id',
+            payee_creditor_id,
+            payment_coordinator_request_id,
+            unique=True,
+        ),
+        db.Index(
+            'idx_reciprocal_payment_coordinator_request_id',
+            payee_creditor_id,
+            reciprocal_payment_coordinator_request_id,
+            unique=True,
+            postgresql_where=reciprocal_payment_coordinator_request_id != null(),
+        ),
+        db.CheckConstraint(or_(
+            payment_transfer_id != null(),
+            reciprocal_payment_coordinator_request_id == null(),
+        )),
+        db.CheckConstraint(or_(
+            reciprocal_payment_coordinator_request_id != null(),
+            reciprocal_payment_transfer_id == null(),
+        )),
+        {
+            'comment': 'Represents a recent order from a payer to make a payment to an offer.',
+        }
+    )
+
+
 class PaymentProof(db.Model):
     payee_creditor_id = db.Column(
         db.BigInteger,
         primary_key=True,
         comment='The payee, also the one that is responsible to supply the goods or services.',
     )
-    proof_id = db.Column(
-        db.BigInteger,
-        primary_key=True,
-        autoincrement=True,
-        comment='Along with `payee_creditor_id` uniquely identifies the payment proof.',
-    )
+    proof_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     proof_secret = db.Column(
         pg.BYTEA,
         nullable=False,
@@ -159,16 +204,8 @@ class PaymentProof(db.Model):
         nullable=False,
         default=get_now_utc,
     )
-    offer_id = db.Column(
-        db.BigInteger,
-        nullable=False,
-        comment='An exact copy of the `formal_offer.offer_id` column.',
-    )
-    offer_created_at_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        comment='An exact copy of the `formal_offer.created_at_ts` column.',
-    )
+    offer_id = db.Column(db.BigInteger, nullable=False)
+    offer_created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
     offer_description = db.Column(
         pg.JSON,
         nullable=False,
@@ -182,58 +219,6 @@ class PaymentProof(db.Model):
                        '(The corresponding offer has been deleted.)',
         }
     )
-
-
-class PaymentOrder(db.Model):
-    payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    offer_id = db.Column(db.BigInteger, primary_key=True)
-    payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    payer_payment_order_id = db.Column(db.BigInteger, primary_key=True)
-    debtor_id = db.Column(
-        db.BigInteger,
-        nullable=False,
-        comment='The ID of the debtor through which the payment should go. Must be one of the '
-                'values in the `formal_offer.debtor_ids` array.',
-    )
-    amount = db.Column(
-        db.BigInteger,
-        nullable=False,
-        comment='The amount to be transferred. Must be equal to the corresponding value in the '
-                '`formal_offer.debtor_amounts` array.',
-    )
-    payment_coordinator_request_id = db.Column(db.BigInteger, nullable=False)
-    payment_transfer_id = db.Column(db.BigInteger)
-    reciprocal_payment_coordinator_request_id = db.Column(db.BigInteger)
-    reciprocal_payment_transfer_id = db.Column(db.BigInteger)
-    is_finalized = db.Column(db.Boolean, nullable=False, default=False)
-    __table_args__ = (
-        db.Index(
-            'idx_payment_coordinator_request_id',
-            payee_creditor_id,
-            payment_coordinator_request_id,
-            unique=True,
-        ),
-        db.Index(
-            'idx_reciprocal_payment_coordinator_request_id',
-            payee_creditor_id,
-            reciprocal_payment_coordinator_request_id,
-            unique=True,
-            postgresql_where=reciprocal_payment_coordinator_request_id != null(),
-        ),
-        db.CheckConstraint(or_(
-            payment_transfer_id != null(),
-            reciprocal_payment_coordinator_request_id == null(),
-        )),
-        db.CheckConstraint(or_(
-            reciprocal_payment_coordinator_request_id != null(),
-            reciprocal_payment_transfer_id == null(),
-        )),
-        {
-            'comment': 'A payment order that is currently being processed.',
-        }
-    )
-
-    # TODO: Use sequence for the `payment_coordinator_request_id` column.
 
 
 class CreatedFormalOfferSignal(Signal):
