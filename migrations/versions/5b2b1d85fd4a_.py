@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 362b6b0f0920
+Revision ID: 5b2b1d85fd4a
 Revises: 953d40d6b4e6
-Create Date: 2019-08-26 21:59:21.425232
+Create Date: 2019-08-26 22:41:06.458496
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '362b6b0f0920'
+revision = '5b2b1d85fd4a'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -68,7 +68,7 @@ def upgrade():
     sa.Column('payment_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('payment_coordinator_request_id_seq')"), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the payment. The value of `payee_creditor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "payment".'),
     sa.Column('payment_transfer_id', sa.BigInteger(), nullable=True, comment='This value, along with `debtor_id` and `payer_creditor_id` uniquely identifies the prepared transfer for the payment.'),
     sa.Column('reciprocal_payment_coordinator_request_id', sa.BigInteger(), nullable=True, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the reciprocal payment. The value of `payee_creditor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "payment".'),
-    sa.Column('reciprocal_payment_transfer_id', sa.BigInteger(), nullable=True, comment='This value, along with `debtor_id` and `payee_creditor_id` uniquely identifies the prepared transfer for the reciprocal payment.'),
+    sa.Column('reciprocal_payment_transfer_id', sa.BigInteger(), nullable=True, comment='This value, along with `formal_offer.reciprocal_payment_debtor_id` and `payee_creditor_id` uniquely identifies the prepared transfer for the reciprocal payment.'),
     sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True),
     sa.CheckConstraint('payment_transfer_id IS NOT NULL OR reciprocal_payment_coordinator_request_id IS NULL'),
     sa.CheckConstraint('reciprocal_payment_coordinator_request_id IS NOT NULL OR reciprocal_payment_transfer_id IS NULL'),

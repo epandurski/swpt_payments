@@ -115,6 +115,11 @@ class FormalOffer(db.Model):
 
 
 class PaymentOrder(db.Model):
+    _payment_coordinator_request_id_seq = db.Sequence(
+        'payment_coordinator_request_id_seq',
+        metadata=db.Model.metadata,
+    )
+
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
     payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
@@ -136,14 +141,10 @@ class PaymentOrder(db.Model):
         comment='The amount to be transferred in the payment. Must be equal to the corresponding '
                 'value in the `formal_offer.debtor_amounts` array.',
     )
-    payment_coordinator_request_id_seq = db.Sequence(
-        'payment_coordinator_request_id_seq',
-        metadata=db.Model.metadata,
-    )
     payment_coordinator_request_id = db.Column(
         db.BigInteger,
         nullable=False,
-        server_default=payment_coordinator_request_id_seq.next_value(),
+        server_default=_payment_coordinator_request_id_seq.next_value(),
         comment='This is the value of the `coordinator_request_id` parameter, which has been '
                 'sent with the `prepare_transfer` message for the payment. The value of '
                 '`payee_creditor_id` is sent as the `coordinator_id` parameter. '
@@ -163,8 +164,9 @@ class PaymentOrder(db.Model):
     )
     reciprocal_payment_transfer_id = db.Column(
         db.BigInteger,
-        comment='This value, along with `debtor_id` and `payee_creditor_id` uniquely identifies '
-                'the prepared transfer for the reciprocal payment.',
+        comment='This value, along with `formal_offer.reciprocal_payment_debtor_id` and '
+                '`payee_creditor_id` uniquely identifies the prepared transfer for the '
+                'reciprocal payment.',
     )
     finalized_at_ts = db.Column(db.TIMESTAMP(timezone=True))
     __table_args__ = (
