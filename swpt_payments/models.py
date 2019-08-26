@@ -282,3 +282,7 @@ class FailedPaymentSignal(Signal):
     payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
     payer_payment_order_seqnum = db.Column(db.Integer, primary_key=True)
     details = db.Column(pg.JSON, nullable=False, default={})
+
+
+# TODO: Add PrepareTransferSignal model.
+# TODO: Add FinalizePreparedTransferSignal model.
