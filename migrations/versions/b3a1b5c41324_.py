@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: d9e687dc3aab
+Revision ID: b3a1b5c41324
 Revises: 953d40d6b4e6
-Create Date: 2019-08-27 18:01:47.631351
+Create Date: 2019-08-27 19:47:47.469200
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'd9e687dc3aab'
+revision = 'b3a1b5c41324'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -37,6 +37,16 @@ def upgrade():
     sa.Column('payer_payment_order_seqnum', sa.Integer(), nullable=False),
     sa.Column('details', postgresql.JSON(astext_type=sa.Text()), nullable=False),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_id', 'payer_creditor_id', 'payer_payment_order_seqnum')
+    )
+    op.create_table('finalize_prepared_transfer_signal',
+    sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
+    sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
+    sa.Column('debtor_id', sa.BigInteger(), nullable=False),
+    sa.Column('sender_creditor_id', sa.BigInteger(), nullable=False),
+    sa.Column('transfer_id', sa.BigInteger(), nullable=False),
+    sa.Column('committed_amount', sa.BigInteger(), nullable=False),
+    sa.Column('transfer_info', postgresql.JSON(astext_type=sa.Text()), nullable=False),
+    sa.PrimaryKeyConstraint('payee_creditor_id', 'signal_id')
     )
     op.create_table('formal_offer',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False, comment='The payee, also the one that is responsible to supply the goods or services.'),
@@ -91,8 +101,7 @@ def upgrade():
     comment='Represents an evidence that a payment has been made to an offer. (The corresponding offer has been deleted.)'
     )
     op.create_table('prepare_transfer_signal',
-    sa.Column('coordinator_type', sa.String(length=30), nullable=False),
-    sa.Column('coordinator_id', sa.BigInteger(), nullable=False),
+    sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('coordinator_request_id', sa.BigInteger(), nullable=False),
     sa.Column('min_amount', sa.BigInteger(), nullable=False),
     sa.Column('max_amount', sa.BigInteger(), nullable=False),
@@ -101,7 +110,7 @@ def upgrade():
     sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False),
     sa.CheckConstraint('max_amount >= min_amount'),
     sa.CheckConstraint('min_amount > 0'),
-    sa.PrimaryKeyConstraint('coordinator_type', 'coordinator_id', 'coordinator_request_id')
+    sa.PrimaryKeyConstraint('payee_creditor_id', 'coordinator_request_id')
     )
     op.create_table('successful_payment_signal',
     sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
@@ -128,6 +137,7 @@ def downgrade():
     op.drop_index('idx_payment_coordinator_request_id', table_name='payment_order')
     op.drop_table('payment_order')
     op.drop_table('formal_offer')
+    op.drop_table('finalize_prepared_transfer_signal')
     op.drop_table('failed_payment_signal')
     op.drop_table('created_formal_offer_signal')
     op.drop_table('canceled_formal_offer_signal')

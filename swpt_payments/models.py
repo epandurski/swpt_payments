@@ -1,5 +1,6 @@
 import datetime
 import dramatiq
+from marshmallow import Schema, fields
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql.expression import func, null, or_
 from .extensions import db, broker, MAIN_EXCHANGE_NAME
@@ -273,8 +274,7 @@ class PrepareTransferSignal(Signal):
     queue_name = 'swpt_accounts'
     actor_name = 'prepare_transfer'
 
-    coordinator_type = db.Column(db.String(30), primary_key=True)
-    coordinator_id = db.Column(db.BigInteger, primary_key=True)
+    payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
     min_amount = db.Column(db.BigInteger, nullable=False)
     max_amount = db.Column(db.BigInteger, nullable=False)
@@ -286,13 +286,32 @@ class PrepareTransferSignal(Signal):
         db.CheckConstraint(max_amount >= min_amount),
     )
 
+    class __marshmallow__(Schema):
+        coordinator_type = fields.String(default='payment')
+        payee_creditor_id = fields.Integer(data_key='coordinator_id')
+        coordinator_request_id = fields.Integer()
+        min_amount = fields.Integer()
+        max_amount = fields.Integer()
+        debtor_id = fields.Integer()
+        sender_creditor_id = fields.Integer()
+        recipient_creditor_id = fields.Integer()
 
-class FinalizePreparedTransferSignal:
+
+class FinalizePreparedTransferSignal(Signal):
     queue_name = 'swpt_accounts'
     actor_name = 'finalize_prepared_transfer'
 
-    debtor_id = db.Column(db.BigInteger, primary_key=True)
-    sender_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    transfer_id = db.Column(db.BigInteger, primary_key=True)
+    payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
+    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    debtor_id = db.Column(db.BigInteger, nullable=False)
+    sender_creditor_id = db.Column(db.BigInteger, nullable=False)
+    transfer_id = db.Column(db.BigInteger, nullable=False)
     committed_amount = db.Column(db.BigInteger, nullable=False)
     transfer_info = db.Column(pg.JSON, nullable=False)
+
+    class __marshmallow__(Schema):
+        debtor_id = fields.Integer()
+        sender_creditor_id = fields.Integer()
+        transfer_id = fields.Integer()
+        committed_amount = fields.Integer()
+        transfer_info = fields.Raw()
