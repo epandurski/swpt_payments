@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: adc17083bff0
+Revision ID: d9e687dc3aab
 Revises: 953d40d6b4e6
-Create Date: 2019-08-27 17:35:59.724518
+Create Date: 2019-08-27 18:01:47.631351
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'adc17083bff0'
+revision = 'd9e687dc3aab'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -99,6 +99,8 @@ def upgrade():
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('sender_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False),
+    sa.CheckConstraint('max_amount >= min_amount'),
+    sa.CheckConstraint('min_amount > 0'),
     sa.PrimaryKeyConstraint('coordinator_type', 'coordinator_id', 'coordinator_request_id')
     )
     op.create_table('successful_payment_signal',
@@ -111,6 +113,7 @@ def upgrade():
     sa.Column('paid_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('proof_id', sa.BigInteger(), nullable=True),
     sa.Column('proof_secret', postgresql.BYTEA(), nullable=True),
+    sa.CheckConstraint('amount >= 0'),
     sa.CheckConstraint('proof_secret IS NOT NULL OR proof_id IS NULL'),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_id', 'payer_creditor_id', 'payer_payment_order_seqnum')
     )

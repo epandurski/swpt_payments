@@ -253,6 +253,7 @@ class SuccessfulPaymentSignal(Signal):
     proof_id = db.Column(db.BigInteger)
     proof_secret = db.Column(pg.BYTEA)
     __table_args__ = (
+        db.CheckConstraint(amount >= 0),
         db.CheckConstraint(or_(
             proof_secret != null(),
             proof_id == null(),
@@ -280,6 +281,10 @@ class PrepareTransferSignal(Signal):
     debtor_id = db.Column(db.BigInteger, nullable=False)
     sender_creditor_id = db.Column(db.BigInteger, nullable=False)
     recipient_creditor_id = db.Column(db.BigInteger, nullable=False)
+    __table_args__ = (
+        db.CheckConstraint(min_amount > 0),
+        db.CheckConstraint(max_amount >= min_amount),
+    )
 
 
 class FinalizePreparedTransferSignal:
