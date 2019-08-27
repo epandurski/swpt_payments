@@ -268,5 +268,26 @@ class FailedPaymentSignal(Signal):
     details = db.Column(pg.JSON, nullable=False, default={})
 
 
-# TODO: Add PrepareTransferSignal model.
-# TODO: Add FinalizePreparedTransferSignal model.
+class PrepareTransferSignal(Signal):
+    queue_name = 'swpt_accounts'
+    actor_name = 'prepare_transfer'
+
+    coordinator_type = db.Column(db.String(30), primary_key=True)
+    coordinator_id = db.Column(db.BigInteger, primary_key=True)
+    coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
+    min_amount = db.Column(db.BigInteger, nullable=False)
+    max_amount = db.Column(db.BigInteger, nullable=False)
+    debtor_id = db.Column(db.BigInteger, nullable=False)
+    sender_creditor_id = db.Column(db.BigInteger, nullable=False)
+    recipient_creditor_id = db.Column(db.BigInteger, nullable=False)
+
+
+class FinalizePreparedTransferSignal:
+    queue_name = 'swpt_accounts'
+    actor_name = 'finalize_prepared_transfer'
+
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    sender_creditor_id = db.Column(db.BigInteger, primary_key=True)
+    transfer_id = db.Column(db.BigInteger, primary_key=True)
+    committed_amount = db.Column(db.BigInteger, nullable=False)
+    transfer_info = db.Column(pg.JSON, nullable=False)
