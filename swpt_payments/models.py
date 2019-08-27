@@ -170,8 +170,8 @@ class PaymentOrder(db.Model):
             payment_coordinator_request_id,
             unique=True,
         ),
+        db.CheckConstraint(amount >= 0),
         db.CheckConstraint(payment_coordinator_request_id > 0),
-        db.CheckConstraint(or_(reciprocal_payment_transfer_id == null(), payment_transfer_id != null())),
         {
             'comment': 'Represents a recent order from a payer to make a payment to an offer.',
         }

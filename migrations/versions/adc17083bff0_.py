@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: cb3b52b2b534
+Revision ID: adc17083bff0
 Revises: 953d40d6b4e6
-Create Date: 2019-08-27 16:58:59.258840
+Create Date: 2019-08-27 17:35:59.724518
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'cb3b52b2b534'
+revision = 'adc17083bff0'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -69,8 +69,8 @@ def upgrade():
     sa.Column('payment_transfer_id', sa.BigInteger(), nullable=True, comment='This value, along with `debtor_id` and `payer_creditor_id` uniquely identifies the prepared transfer for the payment.'),
     sa.Column('reciprocal_payment_transfer_id', sa.BigInteger(), nullable=True, comment='When a reciprocal payment is required, this value along with `formal_offer.reciprocal_payment_debtor_id` and `payee_creditor_id` uniquely identifies the prepared transfer for the reciprocal payment. The reciprocal payment should be initiated only after the primary payment has been prepared successfully. The value of the `coordinator_request_id` parameter for the reciprocal payment should be `-payment_coordinator_request_id` (always a negative number). `coordinator_type` should be "payment".'),
     sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True),
+    sa.CheckConstraint('amount >= 0'),
     sa.CheckConstraint('payment_coordinator_request_id > 0'),
-    sa.CheckConstraint('reciprocal_payment_transfer_id IS NULL OR payment_transfer_id IS NOT NULL'),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_id', 'payer_creditor_id', 'payer_payment_order_seqnum'),
     comment='Represents a recent order from a payer to make a payment to an offer.'
     )
