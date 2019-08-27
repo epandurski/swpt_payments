@@ -152,18 +152,15 @@ class PaymentOrder(db.Model):
         comment='This value, along with `debtor_id` and `payer_creditor_id` uniquely identifies '
                 'the prepared transfer for the payment.',
     )
-    reciprocal_payment_coordinator_request_id = db.Column(
-        db.BigInteger,
-        comment='This is the value of the `coordinator_request_id` parameter, which has been '
-                'sent with the `prepare_transfer` message for the reciprocal payment. The value of '
-                '`payee_creditor_id` is sent as the `coordinator_id` parameter. '
-                '`coordinator_type` is "payment".',
-    )
     reciprocal_payment_transfer_id = db.Column(
         db.BigInteger,
-        comment='This value, along with `formal_offer.reciprocal_payment_debtor_id` and '
-                '`payee_creditor_id` uniquely identifies the prepared transfer for the '
-                'reciprocal payment.',
+        comment='When a reciprocal payment is required, this value along with '
+                '`formal_offer.reciprocal_payment_debtor_id` and `payee_creditor_id` uniquely '
+                'identifies the prepared transfer for the reciprocal payment. The reciprocal '
+                'payment should be initiated only after the primary payment has been prepared '
+                'successfully. The value of the `coordinator_request_id` parameter for the '
+                'reciprocal payment should be `-payment_coordinator_request_id` (always a '
+                'negative number). `coordinator_type` should be "payment".',
     )
     finalized_at_ts = db.Column(db.TIMESTAMP(timezone=True))
     __table_args__ = (
@@ -173,21 +170,8 @@ class PaymentOrder(db.Model):
             payment_coordinator_request_id,
             unique=True,
         ),
-        db.Index(
-            'idx_reciprocal_payment_coordinator_request_id',
-            payee_creditor_id,
-            reciprocal_payment_coordinator_request_id,
-            unique=True,
-            postgresql_where=reciprocal_payment_coordinator_request_id != null(),
-        ),
-        db.CheckConstraint(or_(
-            payment_transfer_id != null(),
-            reciprocal_payment_coordinator_request_id == null(),
-        )),
-        db.CheckConstraint(or_(
-            reciprocal_payment_coordinator_request_id != null(),
-            reciprocal_payment_transfer_id == null(),
-        )),
+        db.CheckConstraint(payment_coordinator_request_id > 0),
+        db.CheckConstraint(or_(reciprocal_payment_transfer_id == null(), payment_transfer_id != null())),
         {
             'comment': 'Represents a recent order from a payer to make a payment to an offer.',
         }
