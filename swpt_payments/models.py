@@ -284,7 +284,6 @@ class PrepareTransferSignal(Signal):
         sender_creditor_id = fields.Integer()
         recipient_creditor_id = fields.Integer()
 
-
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
     min_amount = db.Column(db.BigInteger, nullable=False)
