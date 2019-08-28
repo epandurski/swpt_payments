@@ -315,3 +315,6 @@ class FinalizePreparedTransferSignal(Signal):
     transfer_id = db.Column(db.BigInteger, nullable=False)
     committed_amount = db.Column(db.BigInteger, nullable=False)
     transfer_info = db.Column(pg.JSON, nullable=False)
+    __table_args__ = (
+        db.CheckConstraint(committed_amount >= 0),
+    )
