@@ -33,15 +33,60 @@ def create_formal_offer(
     )
 
 
-# @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
-# def on_prepared_payment_transfer_signal(
-#         debtor_id: int,
-#         sender_creditor_id: int,
-#         transfer_id: int,
-#         coordinator_type: str,
-#         recipient_creditor_id: int,
-#         sender_locked_amount: int,
-#         prepared_at_ts: datetime,
-#         coordinator_id: int,
-#         coordinator_request_id: int):
-#     pass
+@broker.actor(queue_name=APP_QUEUE_NAME)
+def cancel_formal_offer(
+        payee_creditor_id: int,
+        offer_id: int) -> None:
+
+    """Cancels an offer."""
+
+    procedures.create_offer(
+        payee_creditor_id,
+        offer_id,
+    )
+
+
+@broker.actor(queue_name=APP_QUEUE_NAME)
+def make_payment(
+        payee_creditor_id: int,
+        offer_id: int,
+        payer_creditor_id: int,
+        payer_payment_order_seqnum: int,
+        debtor_id: int,
+        amount: int) -> None:
+
+    """Creates a payment order."""
+
+    procedures.make_payment(
+        payee_creditor_id,
+        offer_id,
+        payer_creditor_id,
+        payer_payment_order_seqnum,
+        debtor_id,
+        amount,
+    )
+
+
+@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+def on_prepared_payment_transfer_signal(
+        debtor_id: int,
+        sender_creditor_id: int,
+        transfer_id: int,
+        coordinator_type: str,
+        recipient_creditor_id: int,
+        sender_locked_amount: int,
+        prepared_at_ts: datetime,
+        coordinator_id: int,
+        coordinator_request_id: int) -> None:
+    pass
+
+
+@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+def on_rejected_payment_transfer_signal(
+        debtor_id: int,
+        signal_id: int,
+        coordinator_type: str,
+        coordinator_id: int,
+        coordinator_request_id: int,
+        details: dict) -> None:
+    pass
