@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 67ef87ea563f
+Revision ID: a78761a8cc0a
 Revises: 953d40d6b4e6
-Create Date: 2019-08-28 15:15:58.092176
+Create Date: 2019-08-28 16:15:02.331278
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '67ef87ea563f'
+revision = 'a78761a8cc0a'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -122,9 +122,7 @@ def upgrade():
     sa.Column('amount', sa.BigInteger(), nullable=False),
     sa.Column('paid_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('proof_id', sa.BigInteger(), nullable=True),
-    sa.Column('proof_secret', postgresql.BYTEA(), nullable=True),
     sa.CheckConstraint('amount >= 0'),
-    sa.CheckConstraint('proof_secret IS NOT NULL OR proof_id IS NULL'),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_id', 'payer_creditor_id', 'payer_payment_order_seqnum')
     )
     # ### end Alembic commands ###
