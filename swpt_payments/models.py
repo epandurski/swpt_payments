@@ -252,13 +252,8 @@ class SuccessfulPaymentSignal(Signal):
     amount = db.Column(db.BigInteger, nullable=False)
     paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
     proof_id = db.Column(db.BigInteger)
-    proof_secret = db.Column(pg.BYTEA)
     __table_args__ = (
         db.CheckConstraint(amount >= 0),
-        db.CheckConstraint(or_(
-            proof_secret != null(),
-            proof_id == null(),
-        )),
     )
 
 
