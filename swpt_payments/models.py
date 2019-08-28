@@ -274,6 +274,17 @@ class PrepareTransferSignal(Signal):
     queue_name = 'swpt_accounts'
     actor_name = 'prepare_transfer'
 
+    class __marshmallow__(Schema):
+        coordinator_type = fields.String(default='payment')
+        payee_creditor_id = fields.Integer(data_key='coordinator_id')
+        coordinator_request_id = fields.Integer()
+        min_amount = fields.Integer()
+        max_amount = fields.Integer()
+        debtor_id = fields.Integer()
+        sender_creditor_id = fields.Integer()
+        recipient_creditor_id = fields.Integer()
+
+
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
     min_amount = db.Column(db.BigInteger, nullable=False)
@@ -286,20 +297,17 @@ class PrepareTransferSignal(Signal):
         db.CheckConstraint(max_amount >= min_amount),
     )
 
-    class __marshmallow__(Schema):
-        coordinator_type = fields.String(default='payment')
-        payee_creditor_id = fields.Integer(data_key='coordinator_id')
-        coordinator_request_id = fields.Integer()
-        min_amount = fields.Integer()
-        max_amount = fields.Integer()
-        debtor_id = fields.Integer()
-        sender_creditor_id = fields.Integer()
-        recipient_creditor_id = fields.Integer()
-
 
 class FinalizePreparedTransferSignal(Signal):
     queue_name = 'swpt_accounts'
     actor_name = 'finalize_prepared_transfer'
+
+    class __marshmallow__(Schema):
+        debtor_id = fields.Integer()
+        sender_creditor_id = fields.Integer()
+        transfer_id = fields.Integer()
+        committed_amount = fields.Integer()
+        transfer_info = fields.Raw()
 
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
@@ -308,10 +316,3 @@ class FinalizePreparedTransferSignal(Signal):
     transfer_id = db.Column(db.BigInteger, nullable=False)
     committed_amount = db.Column(db.BigInteger, nullable=False)
     transfer_info = db.Column(pg.JSON, nullable=False)
-
-    class __marshmallow__(Schema):
-        debtor_id = fields.Integer()
-        sender_creditor_id = fields.Integer()
-        transfer_id = fields.Integer()
-        committed_amount = fields.Integer()
-        transfer_info = fields.Raw()
