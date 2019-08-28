@@ -54,7 +54,8 @@ def make_payment(
         payer_payment_order_seqnum: int,
         debtor_id: int,
         amount: int,
-        proof_secret: bytes = b'') -> None:
+        proof_secret: bytes = b'',
+        payer_note: dict = {}) -> None:
 
     """Creates a payment order."""
 
@@ -66,6 +67,7 @@ def make_payment(
         debtor_id,
         amount,
         urlsafe_b64decode(proof_secret),
+        payer_note,
     )
 
 

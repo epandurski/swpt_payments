@@ -209,6 +209,12 @@ class PaymentProof(db.Model):
         comment='The transferred amount. Must be equal to the corresponding value in the '
                 '`formal_offer.debtor_amounts` array.',
     )
+    payer_note = db.Column(
+        pg.JSON,
+        nullable=False,
+        default={},
+        comment='A note from the payer. Can be anything that the payer wants the payee to see.',
+    )
     paid_at_ts = db.Column(
         db.TIMESTAMP(timezone=True),
         nullable=False,
@@ -250,6 +256,7 @@ class SuccessfulPaymentSignal(Signal):
     payer_payment_order_seqnum = db.Column(db.Integer, primary_key=True)
     debtor_id = db.Column(db.BigInteger, nullable=False)
     amount = db.Column(db.BigInteger, nullable=False)
+    payer_note = db.Column(pg.JSON, nullable=False)
     paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
     proof_id = db.Column(db.BigInteger)
     __table_args__ = (

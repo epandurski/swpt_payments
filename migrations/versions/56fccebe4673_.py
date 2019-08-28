@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: a78761a8cc0a
+Revision ID: 56fccebe4673
 Revises: 953d40d6b4e6
-Create Date: 2019-08-28 16:15:02.331278
+Create Date: 2019-08-28 16:45:51.731893
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'a78761a8cc0a'
+revision = '56fccebe4673'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -93,6 +93,7 @@ def upgrade():
     sa.Column('payer_creditor_id', sa.BigInteger(), nullable=False, comment='The payer.'),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False, comment='The ID of the debtor through which the payment went. Must be one of the values in the `formal_offer.debtor_ids` array.'),
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The transferred amount. Must be equal to the corresponding value in the `formal_offer.debtor_amounts` array.'),
+    sa.Column('payer_note', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='A note from the payer. Can be anything that the payer wants the payee to see.'),
     sa.Column('paid_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('offer_id', sa.BigInteger(), nullable=False),
     sa.Column('offer_created_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
@@ -120,6 +121,7 @@ def upgrade():
     sa.Column('payer_payment_order_seqnum', sa.Integer(), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('amount', sa.BigInteger(), nullable=False),
+    sa.Column('payer_note', postgresql.JSON(astext_type=sa.Text()), nullable=False),
     sa.Column('paid_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('proof_id', sa.BigInteger(), nullable=True),
     sa.CheckConstraint('amount >= 0'),
