@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 562768ac673d
+Revision ID: b690ec276cff
 Revises: 953d40d6b4e6
-Create Date: 2019-08-29 14:56:02.395142
+Create Date: 2019-08-29 15:03:47.808861
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '562768ac673d'
+revision = 'b690ec276cff'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -126,8 +126,12 @@ def upgrade():
     sa.Column('amount', sa.BigInteger(), nullable=False),
     sa.Column('payer_note', postgresql.JSON(astext_type=sa.Text()), nullable=False),
     sa.Column('paid_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('reciprocal_payment_debtor_id', sa.BigInteger(), nullable=True),
+    sa.Column('reciprocal_payment_amount', sa.BigInteger(), nullable=False),
     sa.Column('proof_id', sa.BigInteger(), nullable=True),
     sa.CheckConstraint('amount >= 0'),
+    sa.CheckConstraint('reciprocal_payment_amount >= 0'),
+    sa.CheckConstraint('reciprocal_payment_debtor_id IS NOT NULL OR reciprocal_payment_amount = 0'),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_id', 'payer_creditor_id', 'payer_payment_order_seqnum')
     )
     # ### end Alembic commands ###

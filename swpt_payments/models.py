@@ -98,11 +98,11 @@ class FormalOffer(db.Model):
         db.CheckConstraint(func.array_ndims(debtor_ids) == 1),
         db.CheckConstraint(func.array_ndims(debtor_amounts) == 1),
         db.CheckConstraint(func.cardinality(debtor_ids) == func.cardinality(debtor_amounts)),
+        db.CheckConstraint(reciprocal_payment_amount >= 0),
         db.CheckConstraint(or_(
             reciprocal_payment_debtor_id != null(),
             reciprocal_payment_amount == 0,
         )),
-        db.CheckConstraint(reciprocal_payment_amount >= 0),
         {
             'comment': 'Represents an offer to supply some goods or services for a stated price.',
         }
@@ -221,11 +221,11 @@ class PaymentProof(db.Model):
     offer_description = db.Column(pg.JSON)
     __table_args__ = (
         db.CheckConstraint(amount >= 0),
+        db.CheckConstraint(reciprocal_payment_amount >= 0),
         db.CheckConstraint(or_(
             reciprocal_payment_debtor_id != null(),
             reciprocal_payment_amount == 0,
         )),
-        db.CheckConstraint(reciprocal_payment_amount >= 0),
         {
             'comment': 'Represents an evidence that a payment has been made to an offer. '
                        '(The corresponding offer has been deleted.)',
@@ -254,9 +254,16 @@ class SuccessfulPaymentSignal(Signal):
     amount = db.Column(db.BigInteger, nullable=False)
     payer_note = db.Column(pg.JSON, nullable=False)
     paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
+    reciprocal_payment_debtor_id = db.Column(db.BigInteger)
+    reciprocal_payment_amount = db.Column(db.BigInteger, nullable=False)
     proof_id = db.Column(db.BigInteger)
     __table_args__ = (
         db.CheckConstraint(amount >= 0),
+        db.CheckConstraint(reciprocal_payment_amount >= 0),
+        db.CheckConstraint(or_(
+            reciprocal_payment_debtor_id != null(),
+            reciprocal_payment_amount == 0,
+        )),
     )
 
 
