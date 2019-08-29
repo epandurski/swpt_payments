@@ -13,8 +13,8 @@ def create_formal_offer(
         offer_secret: str,
         debtor_ids: List[int],
         debtor_amounts: List[int],
-        description: Optional[dict],
         valid_until_ts: Optional[datetime] = None,
+        description: Optional[dict] = None,
         reciprocal_payment_debtor_id: Optional[int] = None,
         reciprocal_payment_amount: int = 0) -> None:
 
