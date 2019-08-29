@@ -76,10 +76,8 @@ class FormalOffer(db.Model):
     description = db.Column(
         pg.JSON,
         comment='A more or less detailed description of the goods or services that will be '
-                'supplied if a payment is made to the offer. `NULL` means that the payee will '
-                'compensate the payer by an automated reciprocal payment. In this case, and '
-                'only in this case, the `reciprocal_payment_debtor_id` column can be set to a '
-                'non-NULL value.',
+                'supplied if a payment is made to the offer. `NULL` means that the payee '
+                'has no responsibilities whatsoever.',
     )
     reciprocal_payment_debtor_id = db.Column(
         db.BigInteger,
@@ -100,10 +98,6 @@ class FormalOffer(db.Model):
         db.CheckConstraint(func.array_ndims(debtor_ids) == 1),
         db.CheckConstraint(func.array_ndims(debtor_amounts) == 1),
         db.CheckConstraint(func.cardinality(debtor_ids) == func.cardinality(debtor_amounts)),
-        db.CheckConstraint(or_(
-            description == null(),
-            reciprocal_payment_debtor_id == null(),
-        )),
         db.CheckConstraint(or_(
             reciprocal_payment_debtor_id != null(),
             reciprocal_payment_amount == 0,
@@ -220,16 +214,18 @@ class PaymentProof(db.Model):
         nullable=False,
         default=get_now_utc,
     )
+    reciprocal_payment_debtor_id = db.Column(db.BigInteger)
+    reciprocal_payment_amount = db.Column(db.BigInteger, nullable=False)
     offer_id = db.Column(db.BigInteger, nullable=False)
     offer_created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
-    offer_description = db.Column(
-        pg.JSON,
-        nullable=False,
-        comment='An exact copy of the `formal_offer.description` column. Note that this can not be '
-                '`NULL` because payment proofs are not generated for offers with no description.',
-    )
+    offer_description = db.Column(pg.JSON)
     __table_args__ = (
         db.CheckConstraint(amount >= 0),
+        db.CheckConstraint(or_(
+            reciprocal_payment_debtor_id != null(),
+            reciprocal_payment_amount == 0,
+        )),
+        db.CheckConstraint(reciprocal_payment_amount >= 0),
         {
             'comment': 'Represents an evidence that a payment has been made to an offer. '
                        '(The corresponding offer has been deleted.)',

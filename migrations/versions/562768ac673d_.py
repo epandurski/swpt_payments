@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 56fccebe4673
+Revision ID: 562768ac673d
 Revises: 953d40d6b4e6
-Create Date: 2019-08-28 16:45:51.731893
+Create Date: 2019-08-29 14:56:02.395142
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '56fccebe4673'
+revision = '562768ac673d'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -55,7 +55,7 @@ def upgrade():
     sa.Column('offer_secret', postgresql.BYTEA(), nullable=False, comment='A random sequence of bytes that the potential payer should know in order to view the offer or make a payment.'),
     sa.Column('debtor_ids', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=False, comment='The payment should go through one of these debtors. Each element in this array must have a corresponding element in the `debtor_amounts` array. Note thatthe database schema allows some or all of the elements to be `None`, which should be handled with care.'),
     sa.Column('debtor_amounts', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=False, comment='Each element in this array must have a corresponding element in the `debtor_ids` array. Note that the database schema allows one debtor ID to occur more than once in the `debtor_ids` array, each time with a different corresponding amount. The payer is expected to transfer one of the amounts corresponding to the chosen debtor. Also note that the database schema allows some or all of the `debtor_amounts` elements to be `None` or negative numbers, which should be handled as if they were zeros.'),
-    sa.Column('description', postgresql.JSON(astext_type=sa.Text()), nullable=True, comment='A more or less detailed description of the goods or services that will be supplied if a payment is made to the offer. `NULL` means that the payee will compensate the payer by an automated reciprocal payment. In this case, and only in this case, the `reciprocal_payment_debtor_id` column can be set to a non-NULL value.'),
+    sa.Column('description', postgresql.JSON(astext_type=sa.Text()), nullable=True, comment='A more or less detailed description of the goods or services that will be supplied if a payment is made to the offer. `NULL` means that the payee has no responsibilities whatsoever.'),
     sa.Column('reciprocal_payment_debtor_id', sa.BigInteger(), nullable=True, comment='The ID of the debtor through which the reciprocal payment will go.'),
     sa.Column('reciprocal_payment_amount', sa.BigInteger(), server_default=sa.text('0'), nullable=False, comment='The amount to be transferred in the reciprocate payment.'),
     sa.Column('valid_until_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The offer will not be valid after this deadline.'),
@@ -63,7 +63,6 @@ def upgrade():
     sa.CheckConstraint('array_ndims(debtor_amounts) = 1'),
     sa.CheckConstraint('array_ndims(debtor_ids) = 1'),
     sa.CheckConstraint('cardinality(debtor_ids) = cardinality(debtor_amounts)'),
-    sa.CheckConstraint('description IS NULL OR reciprocal_payment_debtor_id IS NULL'),
     sa.CheckConstraint('reciprocal_payment_amount >= 0'),
     sa.CheckConstraint('reciprocal_payment_debtor_id IS NOT NULL OR reciprocal_payment_amount = 0'),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_id'),
@@ -95,10 +94,14 @@ def upgrade():
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The transferred amount. Must be equal to the corresponding value in the `formal_offer.debtor_amounts` array.'),
     sa.Column('payer_note', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='A note from the payer. Can be anything that the payer wants the payee to see.'),
     sa.Column('paid_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('reciprocal_payment_debtor_id', sa.BigInteger(), nullable=True),
+    sa.Column('reciprocal_payment_amount', sa.BigInteger(), nullable=False),
     sa.Column('offer_id', sa.BigInteger(), nullable=False),
     sa.Column('offer_created_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
-    sa.Column('offer_description', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='An exact copy of the `formal_offer.description` column. Note that this can not be `NULL` because payment proofs are not generated for offers with no description.'),
+    sa.Column('offer_description', postgresql.JSON(astext_type=sa.Text()), nullable=True),
     sa.CheckConstraint('amount >= 0'),
+    sa.CheckConstraint('reciprocal_payment_amount >= 0'),
+    sa.CheckConstraint('reciprocal_payment_debtor_id IS NOT NULL OR reciprocal_payment_amount = 0'),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'proof_id'),
     comment='Represents an evidence that a payment has been made to an offer. (The corresponding offer has been deleted.)'
     )
