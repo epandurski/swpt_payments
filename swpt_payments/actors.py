@@ -101,13 +101,15 @@ def create_formal_offer(
 @broker.actor(queue_name=APP_QUEUE_NAME)
 def cancel_formal_offer(
         payee_creditor_id: int,
-        offer_id: int) -> None:
+        offer_id: int,
+        offer_secret: bytes) -> None:
 
     """Cancels an offer."""
 
     procedures.cancel_formal_offer(
         payee_creditor_id,
         offer_id,
+        offer_secret,
     )
 
 

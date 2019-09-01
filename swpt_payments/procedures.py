@@ -47,7 +47,7 @@ def create_formal_offer(payee_creditor_id: int,
 
 
 @atomic
-def cancel_formal_offer(payee_creditor_id: int, offer_id: int) -> None:
+def cancel_formal_offer(payee_creditor_id: int, offer_id: int, offer_secret: bytes) -> None:
     formal_offer = FormalOffer.get_instance((payee_creditor_id, offer_id))
     if formal_offer:
         pass
