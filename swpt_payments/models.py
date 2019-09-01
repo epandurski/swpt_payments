@@ -1,5 +1,6 @@
 import datetime
 import dramatiq
+from base64 import urlsafe_b64encode
 from marshmallow import Schema, fields
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql.expression import func, null, or_
@@ -245,6 +246,13 @@ class CreatedFormalOfferSignal(Signal):
     offer_announcement_id = db.Column(db.BigInteger, nullable=False)
     offer_secret = db.Column(pg.BYTEA, nullable=False)
     offer_created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
+
+    class __marshmallow__(Schema):
+        payee_creditor_id = fields.Integer()
+        offer_id = fields.Integer()
+        offer_announcement_id = fields.Integer()
+        offer_secret = fields.Function(lambda obj: urlsafe_b64encode(obj.offer_secret).decode())
+        offer_created_at_ts = fields.DateTime()
 
 
 class CanceledFormalOfferSignal(Signal):
