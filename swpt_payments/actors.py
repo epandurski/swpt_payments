@@ -40,6 +40,10 @@ def create_formal_offer(
     `CreatedFromalOfferSignal`, `SuccessfulPaymentSignal`, and
     `CanceledFormalOfferSignal` events.
 
+
+    CreatedFromalOfferSignal
+    ------------------------
+
     If a `CreatedFromalOfferSignal` is received for an "initiated" FO
     record, the status of the FO record must be set to "created", and
     the received value for `offer_id` -- recorded.
