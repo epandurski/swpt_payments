@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 7bc19ac62443
+Revision ID: 172e5df9c350
 Revises: 953d40d6b4e6
-Create Date: 2019-09-01 19:10:56.071913
+Create Date: 2019-09-01 22:12:57.629335
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '7bc19ac62443'
+revision = '172e5df9c350'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -59,7 +59,7 @@ def upgrade():
     sa.Column('description', postgresql.JSON(astext_type=sa.Text()), nullable=True, comment='A more or less detailed description of the goods or services that will be supplied if a payment is made to the offer. `NULL` means that the payee has no responsibilities whatsoever.'),
     sa.Column('reciprocal_payment_debtor_id', sa.BigInteger(), nullable=True, comment='The ID of the debtor through which the reciprocal payment will go.'),
     sa.Column('reciprocal_payment_amount', sa.BigInteger(), server_default=sa.text('0'), nullable=False, comment='The amount to be transferred in the reciprocate payment.'),
-    sa.Column('valid_until_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The offer will not be valid after this deadline.'),
+    sa.Column('valid_until_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The offer will not be valid after this deadline.'),
     sa.Column('created_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.CheckConstraint('array_ndims(debtor_amounts) = 1'),
     sa.CheckConstraint('array_ndims(debtor_ids) = 1'),
