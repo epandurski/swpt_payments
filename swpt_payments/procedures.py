@@ -10,7 +10,6 @@ atomic: Callable[[T], T] = db.atomic
 @atomic
 def create_formal_offer(payee_creditor_id: int,
                         offer_announcement_id: int,
-                        offer_secret: bytes,
                         debtor_ids: List[int],
                         debtor_amounts: List[int],
                         valid_until_ts: Optional[datetime] = None,
@@ -25,6 +24,7 @@ def create_formal_offer(payee_creditor_id: int,
     assert reciprocal_payment_debtor_id is None or MIN_INT64 <= reciprocal_payment_debtor_id <= MAX_INT64
     assert 0 <= reciprocal_payment_amount <= MAX_INT64
 
+    offer_secret = b''  # TODO: Generate a proper secret here.
     formal_offer = FormalOffer(
         payee_creditor_id=payee_creditor_id,
         offer_secret=offer_secret,
