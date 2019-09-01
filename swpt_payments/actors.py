@@ -29,9 +29,9 @@ def create_formal_offer(
 
     If `reciprocal_payment_debtor_id` is not `None`, an automated
     reciprocal transfer (for the `reciprocal_payment_amount`, via this
-    debtor) will be made to the payer when the offer is paid. This
-    allows formal offers to be used as a form of currency swapping
-    mechanism.
+    debtor) will be made from the payee to the payer when the offer is
+    paid. This allows formal offers to be used as a form of currency
+    swapping mechanism.
 
     Before sending a message to this actor, the sender must create a
     Formal Offer (FO) database record, with a primary key of
@@ -46,11 +46,11 @@ def create_formal_offer(
 
     If a `CreatedFromalOfferSignal` is received for an "initiated" FO
     record, the status of the FO record must be set to "created", and
-    the received value for `offer_id` -- recorded.
+    the received values for `offer_id` and `offer_secret` -- recorded.
 
     If a `CreatedFromalOfferSignal` is received for an already
     "created", "paid", or "canceled" FO record, the corresponding
-    value of `offer_id` must be compared. If they are the same, no
+    values of `offer_id` must be compared. If they are the same, no
     action should be taken. If they differ, the newly created offer
     must be immediately canceled (by sending a message to the
     `cancel_formal_offer` actor).
@@ -66,7 +66,7 @@ def create_formal_offer(
     If a `SuccessfulPaymentSignal` is received for a "created" FO
     record, the status of the FO record should be set to "paid".
 
-    If a `SuccessfulPaymentSignal` is received any other case, no
+    If a `SuccessfulPaymentSignal` is received in any other case, no
     action should be taken.
 
 
@@ -76,13 +76,21 @@ def create_formal_offer(
     If a `CanceledFormalOfferSignal` is received for a "created" FO
     record, the status of the FO record must be set to "canceled".
 
-    If a `CanceledFormalOfferSignal` is received any other case, no
+    If a `CanceledFormalOfferSignal` is received in any other case, no
     action should be taken.
 
 
-    IMPORTANT NOTE: "paid" or "canceled" FO records must not be
-    deleted right away, to avoid problems when the event handler ends
-    up being executed more than once.
+    IMPORTANT NOTES:
+
+    1. "initiated" FO records must not be deleted.
+
+    2. "created" FO records must not be deleted, but they could be
+       canceled (by sending a message to the `cancel_formal_offer`
+       actor).
+
+    3. "paid" or "canceled" FO records must not be deleted right away,
+       to avoid problems when the event handler ends up being executed
+       more than once.
 
     """
 
