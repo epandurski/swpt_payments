@@ -88,9 +88,8 @@ def create_formal_offer(
        canceled (by sending a message to the `cancel_formal_offer`
        actor).
 
-    3. "paid" or "canceled" FO records must not be deleted right away,
-       to avoid problems when the event handler ends up being executed
-       more than once.
+    3. "paid" or "canceled" FO records can be deleted whenever
+       considered appropriate.
 
     """
 
