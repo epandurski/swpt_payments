@@ -59,24 +59,30 @@ def create_formal_offer(
     FO record is not found, the newly created offer must be
     immediately canceled.
 
-    If a `SuccessfulPaymentSignal` is received for a "created" or
-    "paid" FO record, the corresponding value of `offer_id` must be
-    compared. If they are the same, the status of the FO record should
-    be set to "paid". If they differ, A NEW OFFER SHOULD BE CREATED?
 
-    The "prepared" FO record will be, at some point, finalized (either
-    by a `SuccessfulPaymentSignal`, or by a
-    `CanceledFormalOfferSignal`), and the status set to
-    "finalized". The "finalized" CR record must not be deleted right
-    away, to avoid problems when the event handler ends up being
-    executed more than once.
+    SuccessfulPaymentSignal
+    -----------------------
 
-    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    Note that, in theory, a `SuccessfulPaymentSignal` for the offer
-    can be received before the corresponding
-    `CreatedFromalOfferSignal`. In this case the status of the FO
-    record should be set directly to "paid".
-    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    If a `SuccessfulPaymentSignal` is received for a "created" FO
+    record, the status of the FO record should be set to "paid".
+
+    If a `SuccessfulPaymentSignal` is received any other case, no
+    action should be taken.
+
+
+    CanceledFormalOfferSignal
+    -------------------------
+
+    If a `CanceledFormalOfferSignal` is received for a "created" FO
+    record, the status of the FO record must be set to "canceled".
+
+    If a `CanceledFormalOfferSignal` is received any other case, no
+    action should be taken.
+
+
+    IMPORTANT NOTE: "paid" or "canceled" FO records must not be
+    deleted right away, to avoid problems when the event handler ends
+    up being executed more than once.
 
     """
 
