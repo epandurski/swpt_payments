@@ -18,47 +18,72 @@ def create_formal_offer(
         reciprocal_payment_debtor_id: Optional[int] = None,
         reciprocal_payment_amount: int = 0) -> None:
 
-    """Creates a new formal offer.
+    """Creates a new formal offer to supply some goods or services.
 
-    `payee_creditor_id` offers to deliver the goods or services
+    The `payee_creditor_id` offers to deliver the goods or services
     depicted in `description` if a payment is made to his account via
-    one of the debtors in `debtor_ids`, with the corresponding amount
-    in `debtor_amounts`. The offer will be valid until
-    `valid_until_ts`.
+    one of the debtors in `debtor_ids` (with the corresponding amount
+    in `debtor_amounts`). The offer will be valid until
+    `valid_until_ts`.  `offer_announcement_id` is a number generated
+    by the payee (the payee creates the offer), and must be different
+    for each offer announced by a given payee.
+
+    If `reciprocal_payment_debtor_id` is not `None`, an automated
+    reciprocal transfer (for the `reciprocal_payment_amount`, via this
+    debtor) will be made to the payer when the offer is paid. This
+    allows formal offers to be used as a form of currency swapping
+    mechanism.
+
+    In order to view the offer, or make a payment to the offer, the
+    payer needs to know the `offer_secret` (and the
+    `offer_id`). `offer_secret` is a random bytes sequence, generated
+    by the payee. It serves as a simple security mechanism.
 
     Before sending a message to this actor, the sender must create a
     Formal Offer (FO) database record, with a primary key of
     `(payee_creditor_id, offer_announcement_id)`, and status
     "initiated". This record will be used to act properly on
-    `CreatedFromalOfferSignal` events.
-
-    TODO:
+    `CreatedFromalOfferSignal`, `SuccessfulPaymentSignal`, and
+    `CanceledFormalOfferSignal` events.
 
     On received `CreatedFromalOfferSignal`, the status of the
     corresponding FO record must be set to "created", and the received
-    value for `offer_id` -- recorded. The "prepared" FO record will
-    be, at some point, finalized (either by a
-    `SuccessfulPaymentSignal`, or by a `CanceledFormalOfferSignal`, or
-    by payment being made to the offer, or by using the
-    `cancel_formal_offer` actor), and the status set to
+    value for `offer_id` -- recorded. Note that, in theory, a
+    `SuccessfulPaymentSignal` for the offer can be received before the
+    corresponding `CreatedFromalOfferSignal`. In this case the status
+    of the FO record should be set directly to "paid".
+
+    If a `CreatedFromalOfferSignal` is received for an already
+    "created" or "paid" FO record, the corresponding value of
+    `offer_id` must be compared. If they are the same, no action
+    should be taken. If they differ, the newly created offer must be
+    immediately canceled (by sending a message to the
+    `cancel_formal_offer` actor).
+
+    If a `SuccessfulPaymentSignal` is received for a "created" or
+    "paid" FO record, the corresponding value of `offer_id` must be
+    compared. If they are the same, the status of the FO record should
+    be set to "paid". If they differ, A NEW OFFER SHOULD BE CREATED?
+
+    If a `SuccessfulPaymentSignal` is received for an already
+    "created" or "paid" FO record, the corresponding value of
+    `offer_id` must be compared. If they are the same, no action
+    should be taken. If they differ, the newly created offer must be
+    immediately canceled (by sending a message to the
+    `cancel_formal_offer` actor).
+
+
+    If a `CreatedFromalOfferSignal` is received, but a corresponding
+    FO record is not found, the newly created offer must be
+    immediately canceled (by sending a message to the
+    `cancel_formal_offer` actor).
+
+    The "prepared" FO record will be, at some point, finalized (either
+    by a `SuccessfulPaymentSignal`, or by a
+    `CanceledFormalOfferSignal`), and the status set to
     "finalized". The "finalized" CR record must not be deleted right
     away, to avoid problems when the event handler ends up being
     executed more than once.
-
-    If a `PreparedTransferSignal` is received, but a corresponding CR
-    record is not found, the newly prepared transfer must be
-    immediately dismissed (by sending a message to the
-    `finalize_prepared_transfer` actor with a zero `committed_amount`).
-
-    If a `PreparedTransferSignal` is received for an already
-    "prepared" or "finalized" CR record, the corresponding values of
-    `debtor_id`, `sender_creditor_id`, and `transfer_id` must be
-    compared. If they are the same, no action should be taken. If they
-    differ, the newly prepared transfer must be immediately dismissed.
-
-    If a `RejectedTransferSignal` is received, and the status of the
-    corresponding CR record is "initiated", the CR record must be
-    deleted. Otherwise, no action should be taken.
 
     """
 
