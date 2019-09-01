@@ -96,6 +96,7 @@ class FormalOffer(db.Model):
     )
     valid_until_ts = db.Column(
         db.TIMESTAMP(timezone=True),
+        nullable=False,
         comment='The offer will not be valid after this deadline.'
     )
     created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
