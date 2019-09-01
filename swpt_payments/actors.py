@@ -84,9 +84,9 @@ def create_formal_offer(
 
     1. "initiated" FO records must not be deleted.
 
-    2. "created" FO records must not be deleted, but they could be
-       canceled (by sending a message to the `cancel_formal_offer`
-       actor).
+    2. "created" FO records must not be deleted, Instead, they could
+       be requested to be canceled (by sending a message to the
+       `cancel_formal_offer` actor).
 
     3. "paid" or "canceled" FO records can be deleted whenever
        considered appropriate.
