@@ -111,7 +111,16 @@ def cancel_formal_offer(
         offer_id: int,
         offer_secret: bytes) -> None:
 
-    """Cancels an offer."""
+    """Requests the cancellation of a formal offer.
+
+    If the offer has been successfully canceled, a
+    `CanceledFormalOfferSignal` will be sent. If the offer has
+    received a payment in the meantime, a `SuccessfulPaymentSignal`
+    will be sent instead. Nothing happens if an offer with the given
+    `payee_creditor_id`, `offer_id`, and `offer_secret` does not
+    exist.
+
+    """
 
     procedures.cancel_formal_offer(
         payee_creditor_id,
