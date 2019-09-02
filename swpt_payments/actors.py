@@ -109,7 +109,7 @@ def create_formal_offer(
 def cancel_formal_offer(
         payee_creditor_id: int,
         offer_id: int,
-        offer_secret: bytes) -> None:
+        offer_secret: str) -> None:
 
     """Requests the cancellation of a formal offer.
 
@@ -125,7 +125,7 @@ def cancel_formal_offer(
     procedures.cancel_formal_offer(
         payee_creditor_id,
         offer_id,
-        offer_secret,
+        urlsafe_b64decode(offer_secret),
     )
 
 

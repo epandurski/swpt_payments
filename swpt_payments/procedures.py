@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 from typing import Optional, List, TypeVar, Callable
 from .extensions import db
-from .models import FormalOffer, CreatedFormalOfferSignal, MIN_INT64, MAX_INT64
+from .models import FormalOffer, CreatedFormalOfferSignal, PaymentOrder, FinalizePreparedTransferSignal, \
+    MIN_INT64, MAX_INT64
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -48,6 +49,35 @@ def create_formal_offer(payee_creditor_id: int,
 
 @atomic
 def cancel_formal_offer(payee_creditor_id: int, offer_id: int, offer_secret: bytes) -> None:
-    formal_offer = FormalOffer.get_instance((payee_creditor_id, offer_id))
+    formal_offer = FormalOffer.lock_instance((payee_creditor_id, offer_id))
     if formal_offer:
-        pass
+        pending_payment_orders = PaymentOrder.query.filter_by(
+            payee_creditor_id=payee_creditor_id,
+            offer_id=offer_id,
+            finalized_at_ts=None,
+        ).with_for_update().all()
+        for payement_order in pending_payment_orders:
+            _cancel_payment_order(payement_order)
+        db.session.delete(formal_offer)
+
+
+def _cancel_payment_order(po: PaymentOrder) -> None:
+    if po.payment_transfer_id is not None:
+        db.session.add(FinalizePreparedTransferSignal(
+            payee_creditor_id=po.payee_creditor_id,
+            debtor_id=po.debtor_id,
+            sender_creditor_id=po.payer_creditor_id,
+            transfer_id=po.payment_transfer_id,
+            committed_amount=0,
+            transfer_info={},
+        ))
+    if po.reciprocal_payment_transfer_id is not None:
+        db.session.add(FinalizePreparedTransferSignal(
+            payee_creditor_id=po.payee_creditor_id,
+            debtor_id=po.reciprocal_payment_debtor_id,
+            sender_creditor_id=po.payee_creditor_id,
+            transfer_id=po.reciprocal_payment_transfer_id,
+            committed_amount=0,
+            transfer_info={},
+        ))
+    po.finalized_at_ts = datetime.now(tz=timezone.utc)
