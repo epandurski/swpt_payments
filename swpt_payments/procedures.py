@@ -110,11 +110,14 @@ def make_payment_order(
             message='Invalid debtor ID.',
         )
 
-    if (debtor_id, amount) not in zip(formal_offer.debtor_ids, formal_offer.debtor_amounts):
+    debtor_amounts = [x if (x is not None and x >= 0) else 0 for x in formal_offer.debtor_amounts]
+    if (debtor_id, amount) not in zip(formal_offer.debtor_ids, debtor_amounts):
         return fail(
             error_code='PAY002',
             message='Invalid amount.',
         )
+    assert MIN_INT64 <= payer_creditor_id <= MAX_INT64
+    assert MIN_INT64 <= payer_payment_order_seqnum <= MAX_INT64
 
     payment_order = PaymentOrder(
         payee_creditor_id=payee_creditor_id,
