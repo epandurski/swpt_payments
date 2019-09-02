@@ -140,6 +140,15 @@ class PaymentOrder(db.Model):
         comment='The amount to be transferred in the payment. Must be equal to the corresponding '
                 'value in the `formal_offer.debtor_amounts` array.',
     )
+    reciprocal_payment_debtor_id = db.Column(
+        db.BigInteger,
+        comment='A copy of the corresponding `formal_offer.reciprocal_payment_debtor_id`.',
+    )
+    reciprocal_payment_amount = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='A copy of the corresponding `formal_offer.reciprocal_payment_amount`.',
+    )
     payment_coordinator_request_id = db.Column(
         db.BigInteger,
         nullable=False,
@@ -157,9 +166,9 @@ class PaymentOrder(db.Model):
     reciprocal_payment_transfer_id = db.Column(
         db.BigInteger,
         comment='When a reciprocal payment is required, this value along with '
-                '`formal_offer.reciprocal_payment_debtor_id` and `payee_creditor_id` uniquely '
-                'identifies the prepared transfer for the reciprocal payment. The reciprocal '
-                'payment should be initiated only after the primary payment has been prepared '
+                '`reciprocal_payment_debtor_id` and `payee_creditor_id` uniquely identifies'
+                'the prepared transfer for the reciprocal payment. The reciprocal payment '
+                'should be initiated only after the primary payment has been prepared '
                 'successfully. The value of the `coordinator_request_id` parameter for the '
                 'reciprocal payment should be `-payment_coordinator_request_id` (always a '
                 'negative number). `coordinator_id` should be `payee_creditor_id`. '
@@ -174,7 +183,12 @@ class PaymentOrder(db.Model):
             unique=True,
         ),
         db.CheckConstraint(amount >= 0),
+        db.CheckConstraint(reciprocal_payment_amount >= 0),
         db.CheckConstraint(payment_coordinator_request_id > 0),
+        db.CheckConstraint(or_(
+            reciprocal_payment_debtor_id != null(),
+            reciprocal_payment_amount == 0,
+        )),
         {
             'comment': 'Represents a recent order from a payer to make a payment to an offer.',
         }
