@@ -87,12 +87,6 @@ def make_payment_order(
     assert MIN_INT64 <= payer_creditor_id <= MAX_INT64
     assert MIN_INT64 <= payer_payment_order_seqnum <= MAX_INT64
 
-    fo = FormalOffer.query.filter_by(
-        payee_creditor_id=payee_creditor_id,
-        offer_id=offer_id,
-        offer_secret=offer_secret,
-    ).with_for_update(read=True).one_or_none()
-
     def failure(**kw) -> None:
         db.session.add(FailedPaymentSignal(
             payee_creditor_id=payee_creditor_id,
@@ -102,45 +96,62 @@ def make_payment_order(
             details=kw,
         ))
 
-    def success() -> None:
-        payment_order = PaymentOrder(
-            payee_creditor_id=payee_creditor_id,
-            offer_id=offer_id,
-            payer_creditor_id=payer_creditor_id,
-            payer_payment_order_seqnum=payer_payment_order_seqnum,
-            debtor_id=debtor_id,
-            amount=amount,
-            reciprocal_payment_debtor_id=fo.reciprocal_payment_debtor_id,
-            reciprocal_payment_amount=fo.reciprocal_payment_amount,
-        )
-        db.session.add(payment_order)
-        db.session.flush()
-        db.session.add(PrepareTransferSignal(
-            payee_creditor_id=payee_creditor_id,
-            coordinator_request_id=payment_order.payment_coordinator_request_id,
-            min_amount=amount,
-            max_amount=amount,
-            debtor_id=debtor_id,
-            sender_creditor_id=payer_creditor_id,
-            recipient_creditor_id=payee_creditor_id,
-        ))
+    payment_order_query = PaymentOrder.query.filter_by(
+        payee_creditor_id=payee_creditor_id,
+        offer_id=offer_id,
+        payer_creditor_id=payer_creditor_id,
+        payer_payment_order_seqnum=payer_payment_order_seqnum,
+    )
+    if db.session.query(payment_order_query.exists()).scalar():
+        # A payment order record already exists for this
+        # request. Normally this should happen only when the request
+        # message has been re-delivered. Therefore we ignore it.
+        return
 
-    if not fo:
+    formal_offer = FormalOffer.query.filter_by(
+        payee_creditor_id=payee_creditor_id,
+        offer_id=offer_id,
+        offer_secret=offer_secret,
+    ).with_for_update(read=True).one_or_none()
+
+    if not formal_offer:
+        # TODO: Create PaymentOrder?
         return failure(
             error_code='PAY001',
             message='The formal offer does not exist.',
         )
-    if debtor_id is None or debtor_id not in fo.debtor_ids:
+    if debtor_id is None or debtor_id not in formal_offer.debtor_ids:
         return failure(
             error_code='PAY002',
             message='Invalid debtor ID.',
         )
-    if (debtor_id, amount) not in zip(fo.debtor_ids, _sanitize_amounts(fo.debtor_amounts)):
+    if (debtor_id, amount) not in zip(formal_offer.debtor_ids, _sanitize_amounts(formal_offer.debtor_amounts)):
         return failure(
             error_code='PAY003',
             message='Invalid amount.',
         )
-    return success()
+
+    payment_order = PaymentOrder(
+        payee_creditor_id=payee_creditor_id,
+        offer_id=offer_id,
+        payer_creditor_id=payer_creditor_id,
+        payer_payment_order_seqnum=payer_payment_order_seqnum,
+        debtor_id=debtor_id,
+        amount=amount,
+        reciprocal_payment_debtor_id=formal_offer.reciprocal_payment_debtor_id,
+        reciprocal_payment_amount=formal_offer.reciprocal_payment_amount,
+    )
+    with db.retry_on_integrity_error():
+        db.session.add(payment_order)
+    db.session.add(PrepareTransferSignal(
+        payee_creditor_id=payee_creditor_id,
+        coordinator_request_id=payment_order.payment_coordinator_request_id,
+        min_amount=amount,
+        max_amount=amount,
+        debtor_id=debtor_id,
+        sender_creditor_id=payer_creditor_id,
+        recipient_creditor_id=payee_creditor_id,
+    ))
 
 
 def _cancel_payment_order(po: PaymentOrder) -> None:
