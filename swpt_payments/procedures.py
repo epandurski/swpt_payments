@@ -1,8 +1,9 @@
+import os
 from datetime import datetime, timezone
 from typing import Optional, List, TypeVar, Callable
 from .extensions import db
 from .models import FormalOffer, CreatedFormalOfferSignal, PaymentOrder, FinalizePreparedTransferSignal, \
-    MIN_INT64, MAX_INT64
+    CanceledFormalOfferSignal, MIN_INT64, MAX_INT64
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -25,7 +26,7 @@ def create_formal_offer(payee_creditor_id: int,
     assert reciprocal_payment_debtor_id is None or MIN_INT64 <= reciprocal_payment_debtor_id <= MAX_INT64
     assert 0 <= reciprocal_payment_amount <= MAX_INT64
 
-    offer_secret = b''  # TODO: Generate a proper secret here.
+    offer_secret = os.urandom(18)
     formal_offer = FormalOffer(
         payee_creditor_id=payee_creditor_id,
         offer_secret=offer_secret,
@@ -42,14 +43,19 @@ def create_formal_offer(payee_creditor_id: int,
     db.session.add(CreatedFormalOfferSignal(
         payee_creditor_id=payee_creditor_id,
         offer_id=formal_offer.offer_id,
-        created_at_ts=formal_offer.offer_id,
         offer_announcement_id=offer_announcement_id,
+        offer_secret=offer_secret,
+        offer_created_at_ts=formal_offer.created_at_ts,
     ))
 
 
 @atomic
 def cancel_formal_offer(payee_creditor_id: int, offer_id: int, offer_secret: bytes) -> None:
-    formal_offer = FormalOffer.lock_instance((payee_creditor_id, offer_id))
+    formal_offer = FormalOffer.query.filter_by(
+        payee_creditor_id=payee_creditor_id,
+        offer_id=offer_id,
+        offer_secret=offer_secret,
+    ).with_for_update().one_or_none()
     if formal_offer:
         pending_payment_orders = PaymentOrder.query.filter_by(
             payee_creditor_id=payee_creditor_id,
@@ -58,10 +64,15 @@ def cancel_formal_offer(payee_creditor_id: int, offer_id: int, offer_secret: byt
         ).with_for_update().all()
         for payement_order in pending_payment_orders:
             _cancel_payment_order(payement_order)
+        db.session.add(CanceledFormalOfferSignal(
+            payee_creditor_id=payee_creditor_id,
+            offer_id=offer_id,
+        ))
         db.session.delete(formal_offer)
 
 
 def _cancel_payment_order(po: PaymentOrder) -> None:
+    assert po.finalized_at_ts is None
     if po.payment_transfer_id is not None:
         db.session.add(FinalizePreparedTransferSignal(
             payee_creditor_id=po.payee_creditor_id,
