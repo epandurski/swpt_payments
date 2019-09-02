@@ -130,9 +130,10 @@ def cancel_formal_offer(
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME)
-def make_payment(
+def make_payment_order(
         payee_creditor_id: int,
         offer_id: int,
+        offer_secret: str,
         payer_creditor_id: int,
         payer_payment_order_seqnum: int,
         debtor_id: int,
@@ -142,9 +143,10 @@ def make_payment(
 
     """Creates a payment order."""
 
-    procedures.make_payment(
+    procedures.make_payment_order(
         payee_creditor_id,
         offer_id,
+        urlsafe_b64decode(offer_secret),
         payer_creditor_id,
         payer_payment_order_seqnum,
         debtor_id,
