@@ -140,6 +140,7 @@ def make_payment_order(
         amount=amount,
         reciprocal_payment_debtor_id=formal_offer.reciprocal_payment_debtor_id,
         reciprocal_payment_amount=formal_offer.reciprocal_payment_amount,
+        payer_note=payer_note,
     )
     with db.retry_on_integrity_error():
         db.session.add(payment_order)

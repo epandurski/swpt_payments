@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: bc5d17e63903
+Revision ID: fdcd95efeaca
 Revises: 953d40d6b4e6
-Create Date: 2019-09-02 16:36:37.046485
+Create Date: 2019-09-02 23:01:39.596024
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'bc5d17e63903'
+revision = 'fdcd95efeaca'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -78,6 +78,7 @@ def upgrade():
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred in the payment. Must be equal to the corresponding value in the `formal_offer.debtor_amounts` array.'),
     sa.Column('reciprocal_payment_debtor_id', sa.BigInteger(), nullable=True, comment='A copy of the corresponding `formal_offer.reciprocal_payment_debtor_id`.'),
     sa.Column('reciprocal_payment_amount', sa.BigInteger(), nullable=False, comment='A copy of the corresponding `formal_offer.reciprocal_payment_amount`.'),
+    sa.Column('payer_note', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='A note from the payer. Can be anything that the payer wants the payee to see.'),
     sa.Column('payment_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('payment_coordinator_request_id_seq')"), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the payment. The value of `payee_creditor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "payment".'),
     sa.Column('payment_transfer_id', sa.BigInteger(), nullable=True, comment='This value, along with `debtor_id` and `payer_creditor_id` uniquely identifies the prepared transfer for the payment.'),
     sa.Column('reciprocal_payment_transfer_id', sa.BigInteger(), nullable=True, comment='When a reciprocal payment is required, this value along with `reciprocal_payment_debtor_id` and `payee_creditor_id` uniquely identifiesthe prepared transfer for the reciprocal payment. The reciprocal payment should be initiated only after the primary payment has been prepared successfully. The value of the `coordinator_request_id` parameter for the reciprocal payment should be `-payment_coordinator_request_id` (always a negative number). `coordinator_id` should be `payee_creditor_id`. `coordinator_type` should be "payment".'),

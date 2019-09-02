@@ -149,6 +149,12 @@ class PaymentOrder(db.Model):
         nullable=False,
         comment='A copy of the corresponding `formal_offer.reciprocal_payment_amount`.',
     )
+    payer_note = db.Column(
+        pg.JSON,
+        nullable=False,
+        default={},
+        comment='A note from the payer. Can be anything that the payer wants the payee to see.',
+    )
     payment_coordinator_request_id = db.Column(
         db.BigInteger,
         nullable=False,
