@@ -271,7 +271,7 @@ class SuccessfulPaymentSignal(Signal):
     paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
     reciprocal_payment_debtor_id = db.Column(db.BigInteger)
     reciprocal_payment_amount = db.Column(db.BigInteger, nullable=False)
-    proof_id = db.Column(db.BigInteger)
+    proof_id = db.Column(db.BigInteger, nullable=False)
     __table_args__ = (
         db.CheckConstraint(amount >= 0),
         db.CheckConstraint(reciprocal_payment_amount >= 0),
