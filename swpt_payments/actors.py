@@ -141,7 +141,13 @@ def make_payment_order(
         proof_secret: str,
         payer_note: dict = {}) -> None:
 
-    """Creates a payment order."""
+    """Tries to make a payment to a formal offer.
+
+    If the payment is successfull, a `SuccessfulPaymentSignal` will be
+    sent. If the payment is not successful, a `FailedPaymentSignal`
+    will be sent.
+
+    """
 
     procedures.make_payment_order(
         payee_creditor_id,

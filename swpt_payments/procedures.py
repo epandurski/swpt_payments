@@ -163,6 +163,16 @@ def _cancel_payment_order(po: PaymentOrder) -> None:
             committed_amount=0,
             transfer_info={},
         ))
+    db.session.add(FailedPaymentSignal(
+        payee_creditor_id=po.payee_creditor_id,
+        offer_id=po.offer_id,
+        payer_creditor_id=po.payer_creditor_id,
+        payer_payment_order_seqnum=po.payer_payment_order_seqnum,
+        details=dict(
+            error_code='PAY004',
+            message='The formal offer has been canceled.',
+        ),
+    ))
     po.finalized_at_ts = datetime.now(tz=timezone.utc)
 
 
