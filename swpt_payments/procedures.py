@@ -82,8 +82,18 @@ def make_payment_order(
         amount: int,
         proof_secret: bytes,
         payer_note: dict = {}) -> None:
+    assert MIN_INT64 <= payee_creditor_id <= MAX_INT64
+    assert MIN_INT64 <= offer_id <= MAX_INT64
+    assert MIN_INT64 <= payer_creditor_id <= MAX_INT64
+    assert MIN_INT64 <= payer_payment_order_seqnum <= MAX_INT64
 
-    def fail(**kw) -> None:
+    fo = FormalOffer.query.filter_by(
+        payee_creditor_id=payee_creditor_id,
+        offer_id=offer_id,
+        offer_secret=offer_secret,
+    ).with_for_update(read=True).one_or_none()
+
+    def failure(**kw) -> None:
         db.session.add(FailedPaymentSignal(
             payee_creditor_id=payee_creditor_id,
             offer_id=offer_id,
@@ -92,54 +102,45 @@ def make_payment_order(
             details=kw,
         ))
 
-    formal_offer = FormalOffer.query.filter_by(
-        payee_creditor_id=payee_creditor_id,
-        offer_id=offer_id,
-        offer_secret=offer_secret,
-    ).with_for_update(read=True).one_or_none()
+    def success() -> None:
+        payment_order = PaymentOrder(
+            payee_creditor_id=payee_creditor_id,
+            offer_id=offer_id,
+            payer_creditor_id=payer_creditor_id,
+            payer_payment_order_seqnum=payer_payment_order_seqnum,
+            debtor_id=debtor_id,
+            amount=amount,
+            reciprocal_payment_debtor_id=fo.reciprocal_payment_debtor_id,
+            reciprocal_payment_amount=fo.reciprocal_payment_amount,
+        )
+        db.session.add(payment_order)
+        db.session.flush()
+        db.session.add(PrepareTransferSignal(
+            payee_creditor_id=payee_creditor_id,
+            coordinator_request_id=payment_order.payment_coordinator_request_id,
+            min_amount=amount,
+            max_amount=amount,
+            debtor_id=debtor_id,
+            sender_creditor_id=payer_creditor_id,
+            recipient_creditor_id=payee_creditor_id,
+        ))
 
-    if not formal_offer:
-        return fail(
+    if not fo:
+        return failure(
             error_code='PAY001',
             message='The formal offer does not exist.',
         )
-
-    if debtor_id is None or debtor_id not in formal_offer.debtor_ids:
-        return fail(
+    if debtor_id is None or debtor_id not in fo.debtor_ids:
+        return failure(
             error_code='PAY002',
             message='Invalid debtor ID.',
         )
-
-    debtor_amounts = [x if (x is not None and x >= 0) else 0 for x in formal_offer.debtor_amounts]
-    if (debtor_id, amount) not in zip(formal_offer.debtor_ids, debtor_amounts):
-        return fail(
-            error_code='PAY002',
+    if (debtor_id, amount) not in zip(fo.debtor_ids, _sanitize_amounts(fo.debtor_amounts)):
+        return failure(
+            error_code='PAY003',
             message='Invalid amount.',
         )
-    assert MIN_INT64 <= payer_creditor_id <= MAX_INT64
-    assert MIN_INT64 <= payer_payment_order_seqnum <= MAX_INT64
-
-    payment_order = PaymentOrder(
-        payee_creditor_id=payee_creditor_id,
-        offer_id=offer_id,
-        payer_creditor_id=payer_creditor_id,
-        payer_payment_order_seqnum=payer_payment_order_seqnum,
-        debtor_id=debtor_id,
-        amount=amount,
-        reciprocal_payment_debtor_id=formal_offer.reciprocal_payment_debtor_id,
-        reciprocal_payment_amount=formal_offer.reciprocal_payment_amount,
-    )
-    db.session.add(payment_order)
-    db.session.flush()
-    db.session.add(PrepareTransferSignal(
-        payee_creditor_id=payee_creditor_id,
-        coordinator_request_id=payment_order.payment_coordinator_request_id,
-        min_amount=amount,
-        max_amount=amount,
-        debtor_id=debtor_id,
-        sender_creditor_id=payer_creditor_id,
-        recipient_creditor_id=payee_creditor_id,
-    ))
+    return success()
 
 
 def _cancel_payment_order(po: PaymentOrder) -> None:
@@ -163,3 +164,7 @@ def _cancel_payment_order(po: PaymentOrder) -> None:
             transfer_info={},
         ))
     po.finalized_at_ts = datetime.now(tz=timezone.utc)
+
+
+def _sanitize_amounts(amounts: List[Optional[int]]) -> List[int]:
+    return [(x if (x is not None and x >= 0) else 0) for x in amounts]
