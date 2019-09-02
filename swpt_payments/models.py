@@ -162,7 +162,8 @@ class PaymentOrder(db.Model):
                 'payment should be initiated only after the primary payment has been prepared '
                 'successfully. The value of the `coordinator_request_id` parameter for the '
                 'reciprocal payment should be `-payment_coordinator_request_id` (always a '
-                'negative number). `coordinator_type` should be "payment".',
+                'negative number). `coordinator_id` should be `payee_creditor_id`. '
+                '`coordinator_type` should be "payment".',
     )
     finalized_at_ts = db.Column(db.TIMESTAMP(timezone=True))
     __table_args__ = (
