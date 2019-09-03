@@ -115,7 +115,6 @@ def make_payment_order(
     ).with_for_update(read=True).one_or_none()
 
     if not formal_offer:
-        # TODO: Create PaymentOrder?
         return failure(
             error_code='PAY001',
             message='The formal offer does not exist.',
