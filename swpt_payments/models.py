@@ -151,9 +151,17 @@ class PaymentOrder(db.Model):
     )
     payer_note = db.Column(
         pg.JSON,
-        nullable=False,
         default={},
-        comment='A note from the payer. Can be anything that the payer wants the payee to see.',
+        comment='A note from the payer. Can be anything that the payer wants the payee to see.'
+                'When the payment order is finalized, the content must be copied over to the'
+                '`payment_proof.payer_note` column, and the value can be set to NULL.',
+    )
+    proof_secret = db.Column(
+        pg.BYTEA,
+        comment='A random sequence of bytes that the interested party should know in order to '
+                'view the payment proof. When the payment order is finalized, the content must '
+                'be copied over to the `payment_proof.proof_secret` column, and the value can '
+                'be set to NULL.',
     )
     payment_coordinator_request_id = db.Column(
         db.BigInteger,
@@ -180,7 +188,11 @@ class PaymentOrder(db.Model):
                 'negative number). `coordinator_id` should be `payee_creditor_id`. '
                 '`coordinator_type` should be "payment".',
     )
-    finalized_at_ts = db.Column(db.TIMESTAMP(timezone=True))
+    finalized_at_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        comment='The moment at which the payment order was finalized. NULL means that the '
+                'payment order has not been finalized yet.',
+    )
     __table_args__ = (
         db.Index(
             'idx_payment_coordinator_request_id',
@@ -196,24 +208,19 @@ class PaymentOrder(db.Model):
             reciprocal_payment_amount == 0,
         )),
         {
-            'comment': 'Represents a recent order from a payer to make a payment to an offer.',
+            'comment': 'Represents a recent order from a payer to make a payment to an offer. '
+                       'Note that finalized payment orders (failed or successful) must not be '
+                       'deleted right away. Instead, after they have been finalized, they should '
+                       'stay in the database for at least few days. This is necessary in order '
+                       'to prevent problems caused by message re-delivery.',
         }
     )
 
 
 class PaymentProof(db.Model):
-    payee_creditor_id = db.Column(
-        db.BigInteger,
-        primary_key=True,
-        comment='The payee, also the one that is responsible to supply the goods or services.',
-    )
+    payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     proof_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    proof_secret = db.Column(
-        pg.BYTEA,
-        nullable=False,
-        comment='A random sequence of bytes that the interested party should know in order to '
-                'view the payment proof.',
-    )
+    proof_secret = db.Column(pg.BYTEA, nullable=False)
     payer_creditor_id = db.Column(
         db.BigInteger,
         nullable=False,
@@ -231,17 +238,8 @@ class PaymentProof(db.Model):
         comment='The transferred amount. Must be equal to the corresponding value in the '
                 '`formal_offer.debtor_amounts` array.',
     )
-    payer_note = db.Column(
-        pg.JSON,
-        nullable=False,
-        default={},
-        comment='A note from the payer. Can be anything that the payer wants the payee to see.',
-    )
-    paid_at_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        default=get_now_utc,
-    )
+    payer_note = db.Column(pg.JSON, nullable=False, default={})
+    paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
     reciprocal_payment_debtor_id = db.Column(db.BigInteger)
     reciprocal_payment_amount = db.Column(db.BigInteger, nullable=False)
     offer_id = db.Column(db.BigInteger, nullable=False)

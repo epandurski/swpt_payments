@@ -141,6 +141,7 @@ def make_payment_order(
         reciprocal_payment_debtor_id=formal_offer.reciprocal_payment_debtor_id,
         reciprocal_payment_amount=formal_offer.reciprocal_payment_amount,
         payer_note=payer_note,
+        proof_secret=proof_secret,
     )
     with db.retry_on_integrity_error():
         db.session.add(payment_order)
@@ -186,6 +187,8 @@ def _cancel_payment_order(po: PaymentOrder) -> None:
         ),
     ))
     po.finalized_at_ts = datetime.now(tz=timezone.utc)
+    po.payer_note = None
+    po.proof_secret = None
 
 
 def _sanitize_amounts(amounts: List[Optional[int]]) -> List[int]:

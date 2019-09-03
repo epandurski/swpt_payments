@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: fdcd95efeaca
+Revision ID: 16c94cf2fdc0
 Revises: 953d40d6b4e6
-Create Date: 2019-09-02 23:01:39.596024
+Create Date: 2019-09-03 21:58:15.199137
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'fdcd95efeaca'
+revision = '16c94cf2fdc0'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -78,27 +78,28 @@ def upgrade():
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred in the payment. Must be equal to the corresponding value in the `formal_offer.debtor_amounts` array.'),
     sa.Column('reciprocal_payment_debtor_id', sa.BigInteger(), nullable=True, comment='A copy of the corresponding `formal_offer.reciprocal_payment_debtor_id`.'),
     sa.Column('reciprocal_payment_amount', sa.BigInteger(), nullable=False, comment='A copy of the corresponding `formal_offer.reciprocal_payment_amount`.'),
-    sa.Column('payer_note', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='A note from the payer. Can be anything that the payer wants the payee to see.'),
+    sa.Column('payer_note', postgresql.JSON(astext_type=sa.Text()), nullable=True, comment='A note from the payer. Can be anything that the payer wants the payee to see.When the payment order is finalized, the content must be copied over to the`payment_proof.payer_note` column, and the value can be set to NULL.'),
+    sa.Column('proof_secret', postgresql.BYTEA(), nullable=True, comment='A random sequence of bytes that the interested party should know in order to view the payment proof. When the payment order is finalized, the content must be copied over to the `payment_proof.proof_secret` column, and the value can be set to NULL.'),
     sa.Column('payment_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('payment_coordinator_request_id_seq')"), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the payment. The value of `payee_creditor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "payment".'),
     sa.Column('payment_transfer_id', sa.BigInteger(), nullable=True, comment='This value, along with `debtor_id` and `payer_creditor_id` uniquely identifies the prepared transfer for the payment.'),
     sa.Column('reciprocal_payment_transfer_id', sa.BigInteger(), nullable=True, comment='When a reciprocal payment is required, this value along with `reciprocal_payment_debtor_id` and `payee_creditor_id` uniquely identifiesthe prepared transfer for the reciprocal payment. The reciprocal payment should be initiated only after the primary payment has been prepared successfully. The value of the `coordinator_request_id` parameter for the reciprocal payment should be `-payment_coordinator_request_id` (always a negative number). `coordinator_id` should be `payee_creditor_id`. `coordinator_type` should be "payment".'),
-    sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True),
+    sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the payment order was finalized. NULL means that the payment order has not been finalized yet.'),
     sa.CheckConstraint('amount >= 0'),
     sa.CheckConstraint('payment_coordinator_request_id > 0'),
     sa.CheckConstraint('reciprocal_payment_amount >= 0'),
     sa.CheckConstraint('reciprocal_payment_debtor_id IS NOT NULL OR reciprocal_payment_amount = 0'),
     sa.PrimaryKeyConstraint('payee_creditor_id', 'offer_id', 'payer_creditor_id', 'payer_payment_order_seqnum'),
-    comment='Represents a recent order from a payer to make a payment to an offer.'
+    comment='Represents a recent order from a payer to make a payment to an offer. Note that finalized payment orders (failed or successful) must not be deleted right away. Instead, after they have been finalized, they should stay in the database for at least few days. This is necessary in order to prevent problems caused by message re-delivery.'
     )
     op.create_index('idx_payment_coordinator_request_id', 'payment_order', ['payee_creditor_id', 'payment_coordinator_request_id'], unique=True)
     op.create_table('payment_proof',
-    sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False, comment='The payee, also the one that is responsible to supply the goods or services.'),
+    sa.Column('payee_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('proof_id', sa.BigInteger(), autoincrement=True, nullable=False),
-    sa.Column('proof_secret', postgresql.BYTEA(), nullable=False, comment='A random sequence of bytes that the interested party should know in order to view the payment proof.'),
+    sa.Column('proof_secret', postgresql.BYTEA(), nullable=False),
     sa.Column('payer_creditor_id', sa.BigInteger(), nullable=False, comment='The payer.'),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False, comment='The ID of the debtor through which the payment went. Must be one of the values in the `formal_offer.debtor_ids` array.'),
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The transferred amount. Must be equal to the corresponding value in the `formal_offer.debtor_amounts` array.'),
-    sa.Column('payer_note', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='A note from the payer. Can be anything that the payer wants the payee to see.'),
+    sa.Column('payer_note', postgresql.JSON(astext_type=sa.Text()), nullable=False),
     sa.Column('paid_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('reciprocal_payment_debtor_id', sa.BigInteger(), nullable=True),
     sa.Column('reciprocal_payment_amount', sa.BigInteger(), nullable=False),
