@@ -96,6 +96,9 @@ def make_payment_order(
             details=kw,
         ))
 
+    # Make sure a payment order has not been created already for this
+    # request. Normally, this could happen only when the request
+    # message has been re-delivered (in which case we just ignore it).
     payment_order_query = PaymentOrder.query.filter_by(
         payee_creditor_id=payee_creditor_id,
         offer_id=offer_id,
@@ -103,9 +106,6 @@ def make_payment_order(
         payer_payment_order_seqnum=payer_payment_order_seqnum,
     )
     if db.session.query(payment_order_query.exists()).scalar():
-        # A payment order record already exists for this
-        # request. Normally this should happen only when the request
-        # message has been re-delivered. Therefore we ignore it.
         return
 
     formal_offer = FormalOffer.query.filter_by(
@@ -129,29 +129,47 @@ def make_payment_order(
             error_code='PAY003',
             message='Invalid amount.',
         )
+    _create_payment_order(
+        formal_offer,
+        payer_creditor_id,
+        payer_payment_order_seqnum,
+        debtor_id,
+        amount,
+        payer_note,
+        proof_secret,
+    )
 
+
+def _create_payment_order(
+        fo: FormalOffer,
+        payer_creditor_id: int,
+        payer_payment_order_seqnum: int,
+        debtor_id: int,
+        amount: int,
+        payer_note: dict,
+        proof_secret: bytes) -> None:
     payment_order = PaymentOrder(
-        payee_creditor_id=payee_creditor_id,
-        offer_id=offer_id,
+        payee_creditor_id=fo.payee_creditor_id,
+        offer_id=fo.offer_id,
         payer_creditor_id=payer_creditor_id,
         payer_payment_order_seqnum=payer_payment_order_seqnum,
         debtor_id=debtor_id,
         amount=amount,
-        reciprocal_payment_debtor_id=formal_offer.reciprocal_payment_debtor_id,
-        reciprocal_payment_amount=formal_offer.reciprocal_payment_amount,
+        reciprocal_payment_debtor_id=fo.reciprocal_payment_debtor_id,
+        reciprocal_payment_amount=fo.reciprocal_payment_amount,
         payer_note=payer_note,
         proof_secret=proof_secret,
     )
     with db.retry_on_integrity_error():
         db.session.add(payment_order)
     db.session.add(PrepareTransferSignal(
-        payee_creditor_id=payee_creditor_id,
+        payee_creditor_id=fo.payee_creditor_id,
         coordinator_request_id=payment_order.payment_coordinator_request_id,
         min_amount=amount,
         max_amount=amount,
         debtor_id=debtor_id,
         sender_creditor_id=payer_creditor_id,
-        recipient_creditor_id=payee_creditor_id,
+        recipient_creditor_id=fo.payee_creditor_id,
     ))
 
 
