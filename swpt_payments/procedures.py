@@ -108,29 +108,30 @@ def make_payment_order(
     if db.session.query(payment_order_query.exists()).scalar():
         return
 
-    formal_offer = FormalOffer.query.filter_by(
+    fo = FormalOffer.query.filter_by(
         payee_creditor_id=payee_creditor_id,
         offer_id=offer_id,
         offer_secret=offer_secret,
     ).with_for_update(read=True).one_or_none()
 
-    if not formal_offer:
+    if not fo:
         return failure(
             error_code='PAY001',
             message='The formal offer does not exist.',
         )
-    if debtor_id is None or debtor_id not in formal_offer.debtor_ids:
+    if debtor_id is None or debtor_id not in fo.debtor_ids:
         return failure(
             error_code='PAY002',
             message='Invalid debtor ID.',
         )
-    if (debtor_id, amount) not in zip(formal_offer.debtor_ids, _sanitize_amounts(formal_offer.debtor_amounts)):
+    if (debtor_id, amount) not in zip(fo.debtor_ids, _sanitize_amounts(fo.debtor_amounts)):
         return failure(
             error_code='PAY003',
             message='Invalid amount.',
         )
+
     _create_payment_order(
-        formal_offer,
+        fo,
         payer_creditor_id,
         payer_payment_order_seqnum,
         debtor_id,
