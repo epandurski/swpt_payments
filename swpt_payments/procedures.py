@@ -135,8 +135,8 @@ def make_payment_order(
             payer_payment_order_seqnum,
             debtor_id,
             amount,
-            payer_note,
             proof_secret,
+            payer_note,
         )
 
 
@@ -146,8 +146,8 @@ def _create_payment_order(
         payer_payment_order_seqnum: int,
         debtor_id: int,
         amount: int,
-        payer_note: dict,
-        proof_secret: bytes) -> None:
+        proof_secret: bytes,
+        payer_note: dict) -> None:
     payment_order = PaymentOrder(
         payee_creditor_id=fo.payee_creditor_id,
         offer_id=fo.offer_id,
