@@ -96,49 +96,48 @@ def make_payment_order(
             details=kw,
         ))
 
-    # Make sure a payment order has not been created already for this
-    # request. Normally, this could happen only when the request
-    # message has been re-delivered (in which case we just ignore it).
     payment_order_query = PaymentOrder.query.filter_by(
         payee_creditor_id=payee_creditor_id,
         offer_id=offer_id,
         payer_creditor_id=payer_creditor_id,
         payer_payment_order_seqnum=payer_payment_order_seqnum,
     )
-    if db.session.query(payment_order_query.exists()).scalar():
-        return
 
-    fo = FormalOffer.query.filter_by(
-        payee_creditor_id=payee_creditor_id,
-        offer_id=offer_id,
-        offer_secret=offer_secret,
-    ).with_for_update(read=True).one_or_none()
+    # We must make sure that a payment order has not been created
+    # already for this request. Normally, this can happen only when
+    # the request message has been re-delivered. We should ignore the
+    # request in such cases.
+    if not db.session.query(payment_order_query.exists()).scalar():
+        fo = FormalOffer.query.filter_by(
+            payee_creditor_id=payee_creditor_id,
+            offer_id=offer_id,
+            offer_secret=offer_secret,
+        ).with_for_update(read=True).one_or_none()
 
-    if not fo:
-        return failure(
-            error_code='PAY001',
-            message='The formal offer does not exist.',
+        if not fo:
+            return failure(
+                error_code='PAY001',
+                message='The formal offer does not exist.',
+            )
+        if debtor_id is None or debtor_id not in fo.debtor_ids:
+            return failure(
+                error_code='PAY002',
+                message='Invalid debtor ID.',
+            )
+        if (debtor_id, amount) not in zip(fo.debtor_ids, _sanitize_amounts(fo.debtor_amounts)):
+            return failure(
+                error_code='PAY003',
+                message='Invalid amount.',
+            )
+        _create_payment_order(
+            fo,
+            payer_creditor_id,
+            payer_payment_order_seqnum,
+            debtor_id,
+            amount,
+            payer_note,
+            proof_secret,
         )
-    if debtor_id is None or debtor_id not in fo.debtor_ids:
-        return failure(
-            error_code='PAY002',
-            message='Invalid debtor ID.',
-        )
-    if (debtor_id, amount) not in zip(fo.debtor_ids, _sanitize_amounts(fo.debtor_amounts)):
-        return failure(
-            error_code='PAY003',
-            message='Invalid amount.',
-        )
-
-    _create_payment_order(
-        fo,
-        payer_creditor_id,
-        payer_payment_order_seqnum,
-        debtor_id,
-        amount,
-        payer_note,
-        proof_secret,
-    )
 
 
 def _create_payment_order(
