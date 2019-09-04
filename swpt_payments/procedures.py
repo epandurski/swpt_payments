@@ -151,12 +151,43 @@ def process_rejected_payment_transfer_signal(
         coordinator_id: int,
         coordinator_request_id: int,
         details: dict) -> None:
-    assert MIN_INT64 <= coordinator_id <= MAX_INT64
-    assert MIN_INT64 < coordinator_request_id <= MAX_INT64 and coordinator_request_id != 0
+    po, _ = _find_payment_order(coordinator_id, coordinator_request_id)
+    if po and po.finalized_at_ts is None:
+        _abort_payment_order(po, abort_reason=details)
 
-    payment_order, _ = _match_payment_order(coordinator_id, coordinator_request_id)
-    if payment_order and payment_order.finalized_at_ts is None:
-        _abort_payment_order(payment_order, abort_reason=details)
+
+@atomic
+def process_prepared_payment_transfer_signal(
+        debtor_id: int,
+        sender_creditor_id: int,
+        transfer_id: int,
+        recipient_creditor_id: int,
+        sender_locked_amount: int,
+        coordinator_id: int,
+        coordinator_request_id: int) -> None:
+    po, is_reciprocal_payment = _find_payment_order(coordinator_id, coordinator_request_id)
+    if po:
+        if is_reciprocal_payment:
+            assert po.reciprocal_payment_debtor_id == debtor_id
+            assert po.reciprocal_payment_amount == sender_locked_amount
+            assert po.payer_creditor_id == recipient_creditor_id
+            assert po.payee_creditor_id == sender_creditor_id
+            _mark_prepared_reciprocal_payment()
+        else:
+            assert po.debtor_id == debtor_id
+            assert po.amount == sender_locked_amount
+            assert po.payer_creditor_id == sender_creditor_id
+            assert po.payee_creditor_id == recipient_creditor_id
+            _mark_prepared_payment()
+    else:
+        db.session.add(FinalizePreparedTransferSignal(
+            payee_creditor_id=coordinator_id,
+            debtor_id=debtor_id,
+            sender_creditor_id=sender_creditor_id,
+            transfer_id=transfer_id,
+            committed_amount=0,
+            transfer_info={},
+        ))
 
 
 def _create_payment_order(
@@ -228,7 +259,10 @@ def _sanitize_amounts(amounts: List[Optional[int]]) -> List[int]:
     return [(x if (x is not None and x >= 0) else 0) for x in amounts]
 
 
-def _match_payment_order(coordinator_id: int, coordinator_request_id: int) -> Tuple[Optional[PaymentOrder], Bool]:
+def _find_payment_order(coordinator_id: int, coordinator_request_id: int) -> Tuple[Optional[PaymentOrder], Bool]:
+    assert MIN_INT64 <= coordinator_id <= MAX_INT64
+    assert MIN_INT64 < coordinator_request_id <= MAX_INT64 and coordinator_request_id != 0
+
     payment_order = PaymentOrder.query.filter_by(
         payee_creditor_id=coordinator_id,
         payment_coordinator_request_id=abs(coordinator_request_id),

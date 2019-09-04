@@ -173,7 +173,16 @@ def on_prepared_payment_transfer_signal(
         prepared_at_ts: datetime,
         coordinator_id: int,
         coordinator_request_id: int) -> None:
-    pass
+    assert coordinator_type == 'payment'
+    procedures.process_prepared_payment_transfer_signal(
+        debtor_id,
+        sender_creditor_id,
+        transfer_id,
+        recipient_creditor_id,
+        sender_locked_amount,
+        coordinator_id,
+        coordinator_request_id,
+    )
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
