@@ -153,14 +153,16 @@ class PaymentOrder(db.Model):
         pg.JSON,
         default={},
         comment='A note from the payer. Can be anything that the payer wants the payee to see.'
-                'Once the payment order is finalized, the value can be set to NULL.',
+                'If the payment is successful, the content of this column will be copied over to '
+                'the `payment_proof.payer_note` column. After that, the value can be set to NULL.',
     )
     proof_secret = db.Column(
         pg.BYTEA,
         default=b'',
         comment='A random sequence of bytes that the interested party should know in order to '
-                'view the payment proof. Once the payment order is finalized, the value can '
-                'be set to NULL.',
+                'view the payment proof. If the payment is successful, the content of this column '
+                'will be copied over to the `payment_proof.proof_secret` column. After that, the '
+                'value can be set to NULL.',
     )
     payment_coordinator_request_id = db.Column(
         db.BigInteger,
