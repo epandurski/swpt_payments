@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: f4716ba1c29b
+Revision ID: 613a64342643
 Revises: 953d40d6b4e6
-Create Date: 2019-09-04 10:56:28.706141
+Create Date: 2019-09-04 11:04:23.921124
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'f4716ba1c29b'
+revision = '613a64342643'
 down_revision = '953d40d6b4e6'
 branch_labels = None
 depends_on = None
@@ -98,8 +98,8 @@ def upgrade():
     sa.Column('proof_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('proof_secret', postgresql.BYTEA(), nullable=False),
     sa.Column('payer_creditor_id', sa.BigInteger(), nullable=False),
-    sa.Column('debtor_id', sa.BigInteger(), nullable=False, comment='The ID of the debtor through which the payment went. Must be one of the values in the `formal_offer.debtor_ids` array.'),
-    sa.Column('amount', sa.BigInteger(), nullable=False, comment='The transferred amount. Must be equal to the corresponding value in the `formal_offer.debtor_amounts` array.'),
+    sa.Column('debtor_id', sa.BigInteger(), nullable=False, comment='The ID of the debtor through which the payment went.'),
+    sa.Column('amount', sa.BigInteger(), nullable=False),
     sa.Column('payer_note', postgresql.JSON(astext_type=sa.Text()), nullable=False),
     sa.Column('paid_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('reciprocal_payment_debtor_id', sa.BigInteger(), nullable=True),

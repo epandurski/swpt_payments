@@ -236,15 +236,9 @@ class PaymentProof(db.Model):
     debtor_id = db.Column(
         db.BigInteger,
         nullable=False,
-        comment='The ID of the debtor through which the payment went. Must be one of the values '
-                'in the `formal_offer.debtor_ids` array.',
+        comment='The ID of the debtor through which the payment went.',
     )
-    amount = db.Column(
-        db.BigInteger,
-        nullable=False,
-        comment='The transferred amount. Must be equal to the corresponding value in the '
-                '`formal_offer.debtor_amounts` array.',
-    )
+    amount = db.Column(db.BigInteger, nullable=False)
     payer_note = db.Column(pg.JSON, nullable=False, default={})
     paid_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
     reciprocal_payment_debtor_id = db.Column(db.BigInteger)
