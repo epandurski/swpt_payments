@@ -184,4 +184,9 @@ def on_rejected_payment_transfer_signal(
         coordinator_id: int,
         coordinator_request_id: int,
         details: dict) -> None:
-    pass
+    assert coordinator_type == 'payment'
+    procedures.process_rejected_payment_transfer_signal(
+        coordinator_id,
+        coordinator_request_id,
+        details,
+    )

@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timezone
-from typing import Optional, List, TypeVar, Callable
+from typing import Optional, List, Tuple, Bool, TypeVar, Callable
 from .extensions import db
 from .models import FormalOffer, CreatedFormalOfferSignal, PaymentOrder, FinalizePreparedTransferSignal, \
     CanceledFormalOfferSignal, PrepareTransferSignal, FailedPaymentSignal, MIN_INT64, MAX_INT64
@@ -63,7 +63,13 @@ def cancel_formal_offer(payee_creditor_id: int, offer_id: int, offer_secret: byt
             finalized_at_ts=None,
         ).with_for_update().all()
         for payement_order in pending_payment_orders:
-            _cancel_payment_order(payement_order)
+            _abort_payment_order(
+                payement_order,
+                abort_reason={
+                    'error_code': 'PAY004',
+                    'message': 'The formal offer has been canceled.',
+                },
+            )
         db.session.add(CanceledFormalOfferSignal(
             payee_creditor_id=payee_creditor_id,
             offer_id=offer_id,
@@ -140,6 +146,19 @@ def make_payment_order(
         )
 
 
+@atomic
+def process_rejected_payment_transfer_signal(
+        coordinator_id: int,
+        coordinator_request_id: int,
+        details: dict) -> None:
+    assert MIN_INT64 <= coordinator_id <= MAX_INT64
+    assert MIN_INT64 < coordinator_request_id <= MAX_INT64 and coordinator_request_id != 0
+
+    po, _ = _match_payment_order(coordinator_id, coordinator_request_id)
+    if po and po.finalized_at_ts is None:
+        _abort_payment_order(po, abort_reason=details)
+
+
 def _create_payment_order(
         fo: FormalOffer,
         payer_creditor_id: int,
@@ -173,7 +192,7 @@ def _create_payment_order(
     ))
 
 
-def _cancel_payment_order(po: PaymentOrder) -> None:
+def _abort_payment_order(po: PaymentOrder, abort_reason: dict) -> None:
     assert po.finalized_at_ts is None
     if po.payment_transfer_id is not None:
         db.session.add(FinalizePreparedTransferSignal(
@@ -198,10 +217,7 @@ def _cancel_payment_order(po: PaymentOrder) -> None:
         offer_id=po.offer_id,
         payer_creditor_id=po.payer_creditor_id,
         payer_payment_order_seqnum=po.payer_payment_order_seqnum,
-        details=dict(
-            error_code='PAY004',
-            message='The formal offer has been canceled.',
-        ),
+        details=abort_reason,
     ))
     po.finalized_at_ts = datetime.now(tz=timezone.utc)
     po.payer_note = None
@@ -210,3 +226,12 @@ def _cancel_payment_order(po: PaymentOrder) -> None:
 
 def _sanitize_amounts(amounts: List[Optional[int]]) -> List[int]:
     return [(x if (x is not None and x >= 0) else 0) for x in amounts]
+
+
+def _match_payment_order(coordinator_id: int, coordinator_request_id: int) -> Tuple[Optional[PaymentOrder], Bool]:
+    payment_order = PaymentOrder.query.filter_by(
+        payee_creditor_id=coordinator_id,
+        payment_coordinator_request_id=abs(coordinator_request_id),
+    ).with_for_update().one_or_none()
+    is_reciprocal_payment = coordinator_request_id < 0
+    return payment_order, is_reciprocal_payment
