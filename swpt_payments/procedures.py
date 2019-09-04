@@ -172,13 +172,13 @@ def process_prepared_payment_transfer_signal(
             assert po.reciprocal_payment_amount == sender_locked_amount
             assert po.payer_creditor_id == recipient_creditor_id
             assert po.payee_creditor_id == sender_creditor_id
-            _mark_prepared_reciprocal_payment()
+            _mark_prepared_reciprocal_payment(po, transfer_id)
         else:
             assert po.debtor_id == debtor_id
             assert po.amount == sender_locked_amount
             assert po.payer_creditor_id == sender_creditor_id
             assert po.payee_creditor_id == recipient_creditor_id
-            _mark_prepared_payment()
+            _mark_prepared_payment(po. transfer_id)
     else:
         db.session.add(FinalizePreparedTransferSignal(
             payee_creditor_id=coordinator_id,
