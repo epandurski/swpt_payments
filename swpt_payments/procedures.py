@@ -172,22 +172,29 @@ def process_prepared_payment_transfer_signal(
             assert po.reciprocal_payment_amount == sender_locked_amount
             assert po.payer_creditor_id == recipient_creditor_id
             assert po.payee_creditor_id == sender_creditor_id
-            _mark_prepared_reciprocal_payment(po, transfer_id)
+            attr_name = 'reciprocal_payment_transfer_id'
         else:
             assert po.debtor_id == debtor_id
             assert po.amount == sender_locked_amount
             assert po.payer_creditor_id == sender_creditor_id
             assert po.payee_creditor_id == recipient_creditor_id
-            _mark_prepared_payment(po. transfer_id)
-    else:
-        db.session.add(FinalizePreparedTransferSignal(
-            payee_creditor_id=coordinator_id,
-            debtor_id=debtor_id,
-            sender_creditor_id=sender_creditor_id,
-            transfer_id=transfer_id,
-            committed_amount=0,
-            transfer_info={},
-        ))
+            attr_name = 'payment_transfer_id'
+        attr_value = getattr(po, attr_name)
+        if attr_value is None and po.finalized_at_ts is None:
+            setattr(po, attr_name, transfer_id)
+            _try_to_finalize_payment_order(po)
+            return
+        if attr_value == transfer_id:
+            # The request message has been re-delivered. Do nothing.
+            return
+    db.session.add(FinalizePreparedTransferSignal(
+        payee_creditor_id=coordinator_id,
+        debtor_id=debtor_id,
+        sender_creditor_id=sender_creditor_id,
+        transfer_id=transfer_id,
+        committed_amount=0,
+        transfer_info={},
+    ))
 
 
 def _create_payment_order(
