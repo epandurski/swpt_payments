@@ -165,6 +165,10 @@ def process_prepared_payment_transfer_signal(
         sender_locked_amount: int,
         coordinator_id: int,
         coordinator_request_id: int) -> None:
+    assert MIN_INT64 <= debtor_id <= MAX_INT64
+    assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
+    assert MIN_INT64 <= transfer_id <= MAX_INT64
+
     po, is_reciprocal_payment = _find_payment_order(coordinator_id, coordinator_request_id)
     if po:
         if is_reciprocal_payment:
@@ -185,7 +189,9 @@ def process_prepared_payment_transfer_signal(
             _try_to_finalize_payment_order(po)
             return
         if attr_value == transfer_id:
-            # The request message has been re-delivered. Do nothing.
+            # Normally, this can happen only when the prepared
+            # transfer message has been re-delivered. Therefore, no
+            # action should be taken.
             return
     db.session.add(FinalizePreparedTransferSignal(
         payee_creditor_id=coordinator_id,
