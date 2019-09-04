@@ -87,13 +87,15 @@ class FormalOffer(db.Model):
     )
     reciprocal_payment_debtor_id = db.Column(
         db.BigInteger,
-        comment='The ID of the debtor through which the reciprocal payment will go.',
+        comment='The ID of the debtor through which the reciprocal payment will go.'
+                'If this is not NULL, when a payment is made to the offer, an automatic '
+                'reciprocal payment will be made from the payee to the payer.',
     )
     reciprocal_payment_amount = db.Column(
         db.BigInteger,
         nullable=False,
         server_default=db.text('0'),
-        comment='The amount to be transferred in the reciprocate payment.',
+        comment='The amount to be transferred in the reciprocal payment.',
     )
     valid_until_ts = db.Column(
         db.TIMESTAMP(timezone=True),
@@ -121,7 +123,11 @@ class PaymentOrder(db.Model):
 
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
-    payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
+    payer_creditor_id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        comment='The payer.',
+    )
     payer_payment_order_seqnum = db.Column(
         db.Integer,
         primary_key=True,
@@ -226,11 +232,7 @@ class PaymentProof(db.Model):
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     proof_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     proof_secret = db.Column(pg.BYTEA, nullable=False)
-    payer_creditor_id = db.Column(
-        db.BigInteger,
-        nullable=False,
-        comment='The payer.',
-    )
+    payer_creditor_id = db.Column(db.BigInteger, nullable=False)
     debtor_id = db.Column(
         db.BigInteger,
         nullable=False,
