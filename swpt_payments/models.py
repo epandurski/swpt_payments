@@ -3,7 +3,7 @@ import dramatiq
 from base64 import urlsafe_b64encode
 from marshmallow import Schema, fields
 from sqlalchemy.dialects import postgresql as pg
-from sqlalchemy.sql.expression import func, null, or_
+from sqlalchemy.sql.expression import func, null, or_, and_
 from .extensions import db, broker, MAIN_EXCHANGE_NAME
 
 MIN_INT32 = -1 << 31
@@ -153,14 +153,13 @@ class PaymentOrder(db.Model):
         pg.JSON,
         default={},
         comment='A note from the payer. Can be anything that the payer wants the payee to see.'
-                'When the payment order is finalized, the content must be copied over to the'
-                '`payment_proof.payer_note` column, and the value can be set to NULL.',
+                'Once the payment order is finalized, the value can be set to NULL.',
     )
     proof_secret = db.Column(
         pg.BYTEA,
+        default=b'',
         comment='A random sequence of bytes that the interested party should know in order to '
-                'view the payment proof. When the payment order is finalized, the content must '
-                'be copied over to the `payment_proof.proof_secret` column, and the value can '
+                'view the payment proof. Once the payment order is finalized, the value can '
                 'be set to NULL.',
     )
     payment_coordinator_request_id = db.Column(
@@ -206,6 +205,10 @@ class PaymentOrder(db.Model):
         db.CheckConstraint(or_(
             reciprocal_payment_debtor_id != null(),
             reciprocal_payment_amount == 0,
+        )),
+        db.CheckConstraint(or_(
+            finalized_at_ts != null(),
+            and_(payer_note != null(), proof_secret != null()),
         )),
         {
             'comment': 'Represents a recent order from a payer to make a payment to an offer. '
