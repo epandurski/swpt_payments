@@ -154,9 +154,9 @@ def process_rejected_payment_transfer_signal(
     assert MIN_INT64 <= coordinator_id <= MAX_INT64
     assert MIN_INT64 < coordinator_request_id <= MAX_INT64 and coordinator_request_id != 0
 
-    po, _ = _match_payment_order(coordinator_id, coordinator_request_id)
-    if po and po.finalized_at_ts is None:
-        _abort_payment_order(po, abort_reason=details)
+    payment_order, _ = _match_payment_order(coordinator_id, coordinator_request_id)
+    if payment_order and payment_order.finalized_at_ts is None:
+        _abort_payment_order(payment_order, abort_reason=details)
 
 
 def _create_payment_order(
