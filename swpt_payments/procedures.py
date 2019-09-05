@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timezone
-from typing import Optional, List, Tuple, Bool, TypeVar, Callable
+from typing import Optional, List, Tuple, TypeVar, Callable
 from .extensions import db
 from .models import FormalOffer, CreatedFormalOfferSignal, PaymentOrder, FinalizePreparedTransferSignal, \
     CanceledFormalOfferSignal, PrepareTransferSignal, FailedPaymentSignal, SuccessfulPaymentSignal, \
@@ -59,16 +59,7 @@ def cancel_formal_offer(payee_creditor_id: int, offer_id: int, offer_secret: byt
     ).with_for_update().one_or_none()
 
     if formal_offer:
-        unfinalized_payment_orders = PaymentOrder.query.filter_by(
-            payee_creditor_id=payee_creditor_id,
-            offer_id=offer_id,
-            finalized_at_ts=None,
-        ).with_for_update().all()
-        for payement_order in unfinalized_payment_orders:
-            _abort_payment_order(
-                payement_order,
-                abort_reason={'error_code': 'PAY004', 'message': 'The offer has been canceled.'},
-            )
+        _abort_unfinalized_payment_orders(formal_offer)
         db.session.add(CanceledFormalOfferSignal(
             payee_creditor_id=payee_creditor_id,
             offer_id=offer_id,
@@ -221,12 +212,28 @@ def _create_payment_order(
     return po
 
 
-def _finalize_payment_order(po: PaymentOrder, current_ts: datetime) -> None:
+def _abort_unfinalized_payment_orders(fo: FormalOffer) -> None:
+    unfinalized_payment_orders = PaymentOrder.query.filter_by(
+        payee_creditor_id=fo.payee_creditor_id,
+        offer_id=fo.offer_id,
+        finalized_at_ts=None,
+    ).with_for_update().all()
+    for payement_order in unfinalized_payment_orders:
+        _abort_payment_order(
+            payement_order,
+            abort_reason={'error_code': 'PAY004', 'message': 'The offer has been canceled.'},
+        )
+
+
+def _finalize_payment_order(po: PaymentOrder, current_ts: datetime) -> Tuple[dict, bytes]:
     assert po.finalized_at_ts is None
 
-    po.finalized_at_ts = current_ts
+    payer_note = po.payer_note
+    proof_secret = po.proof_secret
     po.payer_note = None
     po.proof_secret = None
+    po.finalized_at_ts = current_ts
+    return payer_note, proof_secret
 
 
 def _abort_payment_order(po: PaymentOrder, abort_reason: dict) -> None:
@@ -263,6 +270,17 @@ def _abort_payment_order(po: PaymentOrder, abort_reason: dict) -> None:
 def _execute_payment_order(po: PaymentOrder) -> None:
     assert po.finalized_at_ts is None
 
+    # We can be sure that the corresponding formal offer record exist,
+    # because at this point `po` is locked and *unfinalized*. The
+    # trick is: 1) We finalize all unfinalized payment orders when
+    # deleting an offer record; 2) We obtain a shared lock on the
+    # offer record when creating a new payment order.
+    formal_offer = FormalOffer.query.filter_by(
+        payee_creditor_id=po.payee_creditor_id,
+        offer_id=po.offer_id,
+    ).with_for_update().one()
+
+    # Frist: Finalize all payment orders.
     if po.payment_transfer_id is not None:
         db.session.add(FinalizePreparedTransferSignal(
             payee_creditor_id=po.payee_creditor_id,
@@ -281,27 +299,18 @@ def _execute_payment_order(po: PaymentOrder) -> None:
             committed_amount=po.reciprocal_payment_amount,
             transfer_info={'offer_id': po.offer_id},
         ))
+    payer_note, proof_secret = _finalize_payment_order(po, datetime.now(tz=timezone.utc))
+    _abort_unfinalized_payment_orders(formal_offer)
 
-    # We can be certain that the corresponding formal offer record
-    # still exist, because at this point `po` is locked and
-    # unfinalized. The trick is: We finalize all unfinalized payment
-    # orders when deleting a formal offer record, also we obtain a
-    # shared lock on the formal offer record before creating a new
-    # payment order.
-    formal_offer = FormalOffer.query.filter_by(
-        payee_creditor_id=po.payee_creditor_id,
-        offer_id=po.offer_id,
-    ).with_for_update().one()
-
-    current_ts = datetime.now(tz=timezone.utc)
+    # Second: Generate a payment proof.
     payment_proof = PaymentProof(
         payee_creditor_id=po.payee_creditor_id,
-        proof_secret=po.proof_secret,
+        proof_secret=proof_secret,
         payer_creditor_id=po.payer_creditor_id,
         debtor_id=po.debtor_id,
         amount=po.amount,
-        payer_note=po.payer_note,
-        paid_at_ts=current_ts,
+        payer_note=payer_note,
+        paid_at_ts=po.finalized_at_ts,
         reciprocal_payment_debtor_id=po.reciprocal_payment_debtor_id,
         reciprocal_payment_amount=po.reciprocal_payment_amount,
         offer_id=po.offer_id,
@@ -310,6 +319,8 @@ def _execute_payment_order(po: PaymentOrder) -> None:
     )
     db.session.add(payment_proof)
     db.session.flush()
+
+    # Third: Send successful payment signal and delete the offer.
     db.session.add(SuccessfulPaymentSignal(
         payee_creditor_id=po.payee_creditor_id,
         offer_id=po.offer_id,
@@ -317,13 +328,12 @@ def _execute_payment_order(po: PaymentOrder) -> None:
         payer_payment_order_seqnum=po.payer_payment_order_seqnum,
         debtor_id=po.debtor_id,
         amount=po.amount,
-        payer_note=po.payer_note,
-        paid_at_ts=current_ts,
+        payer_note=payer_note,
+        paid_at_ts=po.finalized_at_ts,
         reciprocal_payment_debtor_id=po.reciprocal_payment_debtor_id,
         reciprocal_payment_amount=po.reciprocal_payment_amount,
         proof_id=payment_proof.proof_id,
     ))
-    _finalize_payment_order(po, current_ts)
     db.session.delete(formal_offer)
 
 
@@ -360,7 +370,7 @@ def _sanitize_amounts(amounts: List[Optional[int]]) -> List[int]:
     return [(x if (x is not None and x >= 0) else 0) for x in amounts]
 
 
-def _find_payment_order(coordinator_id: int, coordinator_request_id: int) -> Tuple[Optional[PaymentOrder], Bool]:
+def _find_payment_order(coordinator_id: int, coordinator_request_id: int) -> Tuple[Optional[PaymentOrder], bool]:
     assert MIN_INT64 <= coordinator_id <= MAX_INT64
     assert MIN_INT64 < coordinator_request_id <= MAX_INT64 and coordinator_request_id != 0
 
