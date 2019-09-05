@@ -57,7 +57,6 @@ def cancel_formal_offer(payee_creditor_id: int, offer_id: int, offer_secret: byt
         offer_id=offer_id,
         offer_secret=offer_secret,
     ).with_for_update().one_or_none()
-
     if formal_offer:
         _abort_unfinalized_payment_orders(formal_offer)
         db.session.add(CanceledFormalOfferSignal(
@@ -125,6 +124,8 @@ def make_payment_order(
             proof_secret,
             payer_note,
         )
+        if datetime.now(tz=timezone.utc) > formal_offer.valid_until_ts:
+            return _abort_payment_order(po, abort_reason={'error_code': 'PAY006', 'message': 'The offer has expired.'})
         _try_to_finalize_payment_order(po)
 
 
@@ -177,6 +178,7 @@ def process_prepared_payment_transfer_signal(
             # transfer message has been re-delivered. Therefore, no
             # action should be taken.
             return
+
     db.session.add(FinalizePreparedTransferSignal(
         payee_creditor_id=coordinator_id,
         debtor_id=debtor_id,
