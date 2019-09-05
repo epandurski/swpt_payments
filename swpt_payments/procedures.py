@@ -282,10 +282,10 @@ def _execute_payment_order(po: PaymentOrder) -> None:
 
     # We can be certain that the corresponding `FormalOffer` record
     # still exist, because at this point `po` is locked and
-    # unfinalized. The trick is that we finalize all unfinalized
-    # payment orders when deleting the `FromalOffer` record, also we
-    # obtain a lock on the `FormalOffer` record before we create a new
-    # payment order.
+    # unfinalized. The reasoning is: We finalize all unfinalized
+    # payment orders when deleting a `FromalOffer` record, also we
+    # obtain a shared lock on the `FormalOffer` record before we
+    # create a new payment order.
     formal_offer = FormalOffer.get_instance((po.payee_creditor_id, po.offer_id))
     assert formal_offer is not None
 
