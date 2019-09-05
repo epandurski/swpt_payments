@@ -29,7 +29,7 @@ def create_formal_offer(payee_creditor_id: int,
 
     offer_secret = os.urandom(18)
     current_ts = datetime.now(tz=timezone.utc)
-    fo = FormalOffer(
+    formal_offer = FormalOffer(
         payee_creditor_id=payee_creditor_id,
         offer_secret=offer_secret,
         debtor_ids=debtor_ids,
@@ -40,11 +40,11 @@ def create_formal_offer(payee_creditor_id: int,
         reciprocal_payment_amount=reciprocal_payment_amount,
         created_at_ts=current_ts,
     )
-    db.session.add(fo)
+    db.session.add(formal_offer)
     db.session.flush()
     db.session.add(CreatedFormalOfferSignal(
         payee_creditor_id=payee_creditor_id,
-        offer_id=fo.offer_id,
+        offer_id=formal_offer.offer_id,
         offer_announcement_id=offer_announcement_id,
         offer_secret=offer_secret,
         offer_created_at_ts=current_ts,
@@ -53,30 +53,28 @@ def create_formal_offer(payee_creditor_id: int,
 
 @atomic
 def cancel_formal_offer(payee_creditor_id: int, offer_id: int, offer_secret: bytes) -> None:
-    fo = FormalOffer.query.filter_by(
+    formal_offer = FormalOffer.query.filter_by(
         payee_creditor_id=payee_creditor_id,
         offer_id=offer_id,
         offer_secret=offer_secret,
     ).with_for_update().one_or_none()
-    if fo:
-        pending_payment_orders = PaymentOrder.query.filter_by(
+
+    if formal_offer:
+        unfinalized_payment_orders = PaymentOrder.query.filter_by(
             payee_creditor_id=payee_creditor_id,
             offer_id=offer_id,
             finalized_at_ts=None,
         ).with_for_update().all()
-        for payement_order in pending_payment_orders:
+        for payement_order in unfinalized_payment_orders:
             _abort_payment_order(
                 payement_order,
-                abort_reason={
-                    'error_code': 'PAY004',
-                    'message': 'The formal offer has been canceled.',
-                },
+                abort_reason={'error_code': 'PAY004', 'message': 'The offer has been canceled.'},
             )
         db.session.add(CanceledFormalOfferSignal(
             payee_creditor_id=payee_creditor_id,
             offer_id=offer_id,
         ))
-        db.session.delete(fo)
+        db.session.delete(formal_offer)
 
 
 @atomic
@@ -116,20 +114,20 @@ def make_payment_order(
     # the request message has been re-delivered. We should ignore the
     # request in such cases.
     if not db.session.query(payment_order_query.exists()).scalar():
-        fo = FormalOffer.query.filter_by(
+        formal_offer = FormalOffer.query.filter_by(
             payee_creditor_id=payee_creditor_id,
             offer_id=offer_id,
             offer_secret=offer_secret,
         ).with_for_update(read=True).one_or_none()
 
-        if not fo:
-            return failure(error_code='PAY001', message='The formal offer does not exist.')
-        if debtor_id is None or debtor_id not in fo.debtor_ids:
+        if not formal_offer:
+            return failure(error_code='PAY001', message='The offer does not exist.')
+        if debtor_id is None or debtor_id not in formal_offer.debtor_ids:
             return failure(error_code='PAY002', message='Invalid debtor ID.')
-        if (debtor_id, amount) not in zip(fo.debtor_ids, _sanitize_amounts(fo.debtor_amounts)):
+        if (debtor_id, amount) not in zip(formal_offer.debtor_ids, _sanitize_amounts(formal_offer.debtor_amounts)):
             return failure(error_code='PAY003', message='Invalid amount.')
         po = _create_payment_order(
-            fo,
+            formal_offer,
             payer_creditor_id,
             payer_payment_order_seqnum,
             debtor_id,
@@ -145,7 +143,7 @@ def process_rejected_payment_transfer_signal(
         coordinator_id: int,
         coordinator_request_id: int,
         details: dict) -> None:
-    po, _ = _find_payment_order(coordinator_id, coordinator_request_id)
+    po, is_reciprocal_payment = _find_payment_order(coordinator_id, coordinator_request_id)
     if po and po.finalized_at_ts is None:
         _abort_payment_order(po, abort_reason=details)
 
@@ -293,6 +291,7 @@ def _execute_payment_order(po: PaymentOrder) -> None:
         reciprocal_payment_amount=po.reciprocal_payment_amount,
         proof_id=po.proof_id,
     ))
+    # TODO: Create payment proof.
     _finalize_payment_order(po, current_ts)
 
 
@@ -333,9 +332,9 @@ def _find_payment_order(coordinator_id: int, coordinator_request_id: int) -> Tup
     assert MIN_INT64 <= coordinator_id <= MAX_INT64
     assert MIN_INT64 < coordinator_request_id <= MAX_INT64 and coordinator_request_id != 0
 
-    payment_order = PaymentOrder.query.filter_by(
+    po = PaymentOrder.query.filter_by(
         payee_creditor_id=coordinator_id,
         payment_coordinator_request_id=abs(coordinator_request_id),
     ).with_for_update().one_or_none()
     is_reciprocal_payment = coordinator_request_id < 0
-    return payment_order, is_reciprocal_payment
+    return po, is_reciprocal_payment
