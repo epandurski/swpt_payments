@@ -4,7 +4,7 @@ from typing import Optional, List, Tuple, Bool, TypeVar, Callable
 from .extensions import db
 from .models import FormalOffer, CreatedFormalOfferSignal, PaymentOrder, FinalizePreparedTransferSignal, \
     CanceledFormalOfferSignal, PrepareTransferSignal, FailedPaymentSignal, SuccessfulPaymentSignal, \
-    MIN_INT64, MAX_INT64
+    PaymentProof, MIN_INT64, MAX_INT64
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -28,7 +28,6 @@ def create_formal_offer(payee_creditor_id: int,
     assert 0 <= reciprocal_payment_amount <= MAX_INT64
 
     offer_secret = os.urandom(18)
-    current_ts = datetime.now(tz=timezone.utc)
     formal_offer = FormalOffer(
         payee_creditor_id=payee_creditor_id,
         offer_secret=offer_secret,
@@ -38,7 +37,7 @@ def create_formal_offer(payee_creditor_id: int,
         description=description,
         reciprocal_payment_debtor_id=reciprocal_payment_debtor_id,
         reciprocal_payment_amount=reciprocal_payment_amount,
-        created_at_ts=current_ts,
+        created_at_ts=datetime.now(tz=timezone.utc),
     )
     db.session.add(formal_offer)
     db.session.flush()
@@ -47,7 +46,7 @@ def create_formal_offer(payee_creditor_id: int,
         offer_id=formal_offer.offer_id,
         offer_announcement_id=offer_announcement_id,
         offer_secret=offer_secret,
-        offer_created_at_ts=current_ts,
+        offer_created_at_ts=formal_offer.created_at_ts,
     ))
 
 
@@ -229,7 +228,8 @@ def _finalize_payment_order(po: PaymentOrder, current_ts: datetime) -> None:
 
 
 def _abort_payment_order(po: PaymentOrder, abort_reason: dict) -> None:
-    current_ts = datetime.now(tz=timezone.utc)
+    assert po.finalized_at_ts is None
+
     if po.payment_transfer_id is not None:
         db.session.add(FinalizePreparedTransferSignal(
             payee_creditor_id=po.payee_creditor_id,
@@ -255,11 +255,12 @@ def _abort_payment_order(po: PaymentOrder, abort_reason: dict) -> None:
         payer_payment_order_seqnum=po.payer_payment_order_seqnum,
         details=abort_reason,
     ))
-    _finalize_payment_order(po, current_ts)
+    _finalize_payment_order(po, datetime.now(tz=timezone.utc))
 
 
 def _execute_payment_order(po: PaymentOrder) -> None:
-    current_ts = datetime.now(tz=timezone.utc)
+    assert po.finalized_at_ts is None
+
     if po.payment_transfer_id is not None:
         db.session.add(FinalizePreparedTransferSignal(
             payee_creditor_id=po.payee_creditor_id,
@@ -278,6 +279,33 @@ def _execute_payment_order(po: PaymentOrder) -> None:
             committed_amount=po.reciprocal_payment_amount,
             transfer_info={'offer_id': po.offer_id},
         ))
+
+    # We can be certain that the corresponding `FormalOffer` record
+    # still exist, because at this point `po` is locked and
+    # unfinalized. The trick is that we finalize all unfinalized
+    # payment orders when deleting the `FromalOffer` record, also we
+    # obtain a lock on the `FormalOffer` record before we create a new
+    # payment order.
+    formal_offer = FormalOffer.get_instance((po.payee_creditor_id, po.offer_id))
+    assert formal_offer is not None
+
+    current_ts = datetime.now(tz=timezone.utc)
+    payment_proof = PaymentProof(
+        payee_creditor_id=po.payee_creditor_id,
+        proof_secret=po.proof_secret,
+        payer_creditor_id=po.payer_creditor_id,
+        debtor_id=po.debtor_id,
+        amount=po.amount,
+        payer_note=po.payer_note,
+        paid_at_ts=current_ts,
+        reciprocal_payment_debtor_id=po.reciprocal_payment_debtor_id,
+        reciprocal_payment_amount=po.reciprocal_payment_amount,
+        offer_id=po.offer_id,
+        offer_created_at_ts=formal_offer.created_at_ts,
+        offer_description=formal_offer.description,
+    )
+    db.session.add(payment_proof)
+    db.session.flush()
     db.session.add(SuccessfulPaymentSignal(
         payee_creditor_id=po.payee_creditor_id,
         offer_id=po.offer_id,
@@ -289,9 +317,8 @@ def _execute_payment_order(po: PaymentOrder) -> None:
         paid_at_ts=current_ts,
         reciprocal_payment_debtor_id=po.reciprocal_payment_debtor_id,
         reciprocal_payment_amount=po.reciprocal_payment_amount,
-        proof_id=po.proof_id,
+        proof_id=payment_proof.proof_id,
     ))
-    # TODO: Create payment proof.
     _finalize_payment_order(po, current_ts)
 
 
