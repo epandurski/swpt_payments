@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 from typing import Optional, List, Tuple, Bool, TypeVar, Callable
 from .extensions import db
 from .models import FormalOffer, CreatedFormalOfferSignal, PaymentOrder, FinalizePreparedTransferSignal, \
-    CanceledFormalOfferSignal, PrepareTransferSignal, FailedPaymentSignal, MIN_INT64, MAX_INT64
+    CanceledFormalOfferSignal, PrepareTransferSignal, FailedPaymentSignal, SuccessfulPaymentSignal, \
+    MIN_INT64, MAX_INT64
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -27,6 +28,7 @@ def create_formal_offer(payee_creditor_id: int,
     assert 0 <= reciprocal_payment_amount <= MAX_INT64
 
     offer_secret = os.urandom(18)
+    current_ts = datetime.now(tz=timezone.utc)
     fo = FormalOffer(
         payee_creditor_id=payee_creditor_id,
         offer_secret=offer_secret,
@@ -36,7 +38,7 @@ def create_formal_offer(payee_creditor_id: int,
         description=description,
         reciprocal_payment_debtor_id=reciprocal_payment_debtor_id,
         reciprocal_payment_amount=reciprocal_payment_amount,
-        created_at_ts=datetime.now(tz=timezone.utc),
+        created_at_ts=current_ts,
     )
     db.session.add(fo)
     db.session.flush()
@@ -45,7 +47,7 @@ def create_formal_offer(payee_creditor_id: int,
         offer_id=fo.offer_id,
         offer_announcement_id=offer_announcement_id,
         offer_secret=offer_secret,
-        offer_created_at_ts=fo.created_at_ts,
+        offer_created_at_ts=current_ts,
     ))
 
 
@@ -121,21 +123,12 @@ def make_payment_order(
         ).with_for_update(read=True).one_or_none()
 
         if not fo:
-            return failure(
-                error_code='PAY001',
-                message='The formal offer does not exist.',
-            )
+            return failure(error_code='PAY001', message='The formal offer does not exist.')
         if debtor_id is None or debtor_id not in fo.debtor_ids:
-            return failure(
-                error_code='PAY002',
-                message='Invalid debtor ID.',
-            )
+            return failure(error_code='PAY002', message='Invalid debtor ID.')
         if (debtor_id, amount) not in zip(fo.debtor_ids, _sanitize_amounts(fo.debtor_amounts)):
-            return failure(
-                error_code='PAY003',
-                message='Invalid amount.',
-            )
-        _create_payment_order(
+            return failure(error_code='PAY003', message='Invalid amount.')
+        po = _create_payment_order(
             fo,
             payer_creditor_id,
             payer_payment_order_seqnum,
@@ -144,6 +137,7 @@ def make_payment_order(
             proof_secret,
             payer_note,
         )
+        _try_to_finalize_payment_order(po)
 
 
 @atomic
@@ -210,8 +204,8 @@ def _create_payment_order(
         debtor_id: int,
         amount: int,
         proof_secret: bytes,
-        payer_note: dict) -> None:
-    payment_order = PaymentOrder(
+        payer_note: dict) -> PaymentOrder:
+    po = PaymentOrder(
         payee_creditor_id=fo.payee_creditor_id,
         offer_id=fo.offer_id,
         payer_creditor_id=payer_creditor_id,
@@ -224,20 +218,20 @@ def _create_payment_order(
         proof_secret=proof_secret,
     )
     with db.retry_on_integrity_error():
-        db.session.add(payment_order)
-    db.session.add(PrepareTransferSignal(
-        payee_creditor_id=fo.payee_creditor_id,
-        coordinator_request_id=payment_order.payment_coordinator_request_id,
-        min_amount=amount,
-        max_amount=amount,
-        debtor_id=debtor_id,
-        sender_creditor_id=payer_creditor_id,
-        recipient_creditor_id=fo.payee_creditor_id,
-    ))
+        db.session.add(po)
+    return po
+
+
+def _finalize_payment_order(po: PaymentOrder, current_ts: datetime) -> None:
+    assert po.finalized_at_ts is None
+
+    po.finalized_at_ts = current_ts
+    po.payer_note = None
+    po.proof_secret = None
 
 
 def _abort_payment_order(po: PaymentOrder, abort_reason: dict) -> None:
-    assert po.finalized_at_ts is None
+    current_ts = datetime.now(tz=timezone.utc)
     if po.payment_transfer_id is not None:
         db.session.add(FinalizePreparedTransferSignal(
             payee_creditor_id=po.payee_creditor_id,
@@ -263,9 +257,72 @@ def _abort_payment_order(po: PaymentOrder, abort_reason: dict) -> None:
         payer_payment_order_seqnum=po.payer_payment_order_seqnum,
         details=abort_reason,
     ))
-    po.finalized_at_ts = datetime.now(tz=timezone.utc)
-    po.payer_note = None
-    po.proof_secret = None
+    _finalize_payment_order(po, current_ts)
+
+
+def _execute_payment_order(po: PaymentOrder) -> None:
+    current_ts = datetime.now(tz=timezone.utc)
+    if po.payment_transfer_id is not None:
+        db.session.add(FinalizePreparedTransferSignal(
+            payee_creditor_id=po.payee_creditor_id,
+            debtor_id=po.debtor_id,
+            sender_creditor_id=po.payer_creditor_id,
+            transfer_id=po.payment_transfer_id,
+            committed_amount=po.amount,
+            transfer_info={'offer_id': po.offer_id},
+        ))
+    if po.reciprocal_payment_transfer_id is not None:
+        db.session.add(FinalizePreparedTransferSignal(
+            payee_creditor_id=po.payee_creditor_id,
+            debtor_id=po.reciprocal_payment_debtor_id,
+            sender_creditor_id=po.payee_creditor_id,
+            transfer_id=po.reciprocal_payment_transfer_id,
+            committed_amount=po.reciprocal_payment_amount,
+            transfer_info={'offer_id': po.offer_id},
+        ))
+    db.session.add(SuccessfulPaymentSignal(
+        payee_creditor_id=po.payee_creditor_id,
+        offer_id=po.offer_id,
+        payer_creditor_id=po.payer_creditor_id,
+        payer_payment_order_seqnum=po.payer_payment_order_seqnum,
+        debtor_id=po.debtor_id,
+        amount=po.amount,
+        payer_note=po.payer_note,
+        paid_at_ts=current_ts,
+        reciprocal_payment_debtor_id=po.reciprocal_payment_debtor_id,
+        reciprocal_payment_amount=po.reciprocal_payment_amount,
+        proof_id=po.proof_id,
+    ))
+    _finalize_payment_order(po, current_ts)
+
+
+def _try_to_finalize_payment_order(po: PaymentOrder) -> None:
+    assert po.finalized_at_ts is None
+
+    should_prepare_transfer = po.payment_transfer_id is None and po.amount > 0
+    should_prepare_reciprocal_transfer = po.reciprocal_payment_transfer_id is None and po.reciprocal_payment_amount > 0
+    if should_prepare_transfer:
+        db.session.add(PrepareTransferSignal(
+            payee_creditor_id=po.payee_creditor_id,
+            coordinator_request_id=po.payment_coordinator_request_id,
+            min_amount=po.amount,
+            max_amount=po.amount,
+            debtor_id=po.debtor_id,
+            sender_creditor_id=po.payer_creditor_id,
+            recipient_creditor_id=po.payee_creditor_id,
+        ))
+    elif should_prepare_reciprocal_transfer:
+        db.session.add(PrepareTransferSignal(
+            payee_creditor_id=po.payee_creditor_id,
+            coordinator_request_id=-po.payment_coordinator_request_id,
+            min_amount=po.reciprocal_payment_amount,
+            max_amount=po.reciprocal_payment_amount,
+            debtor_id=po.reciprocal_payment_debtor_id,
+            sender_creditor_id=po.payee_creditor_id,
+            recipient_creditor_id=po.payer_creditor_id,
+        ))
+    else:
+        _execute_payment_order(po)
 
 
 def _sanitize_amounts(amounts: List[Optional[int]]) -> List[int]:
