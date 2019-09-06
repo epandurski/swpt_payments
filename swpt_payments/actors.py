@@ -1,5 +1,4 @@
 from typing import Optional, List
-from datetime import datetime
 from base64 import urlsafe_b64decode
 import iso8601
 from .extensions import broker, APP_QUEUE_NAME
@@ -12,7 +11,7 @@ def create_formal_offer(
         offer_announcement_id: int,
         debtor_ids: List[int],
         debtor_amounts: List[int],
-        valid_until_ts: datetime,
+        valid_until_ts: str,
         description: Optional[dict] = None,
         reciprocal_payment_debtor_id: Optional[int] = None,
         reciprocal_payment_amount: int = 0) -> None:
@@ -170,7 +169,7 @@ def on_prepared_payment_transfer_signal(
         coordinator_type: str,
         recipient_creditor_id: int,
         sender_locked_amount: int,
-        prepared_at_ts: datetime,
+        prepared_at_ts: str,
         coordinator_id: int,
         coordinator_request_id: int) -> None:
     assert coordinator_type == 'payment'
