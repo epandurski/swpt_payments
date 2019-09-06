@@ -115,7 +115,7 @@ def make_payment_order(
             return failure(error_code='PAY002', message='Invalid debtor ID.')
         if (debtor_id, amount) not in zip(formal_offer.debtor_ids, _sanitize_amounts(formal_offer.debtor_amounts)):
             return failure(error_code='PAY003', message='Invalid amount.')
-        po = _create_payment_order(
+        _make_payment_order(
             formal_offer,
             payer_creditor_id,
             payer_payment_order_seqnum,
@@ -124,9 +124,6 @@ def make_payment_order(
             proof_secret,
             payer_note,
         )
-        if datetime.now(tz=timezone.utc) > formal_offer.valid_until_ts:
-            return _abort_payment_order(po, abort_reason={'error_code': 'PAY006', 'message': 'The offer has expired.'})
-        _try_to_finalize_payment_order(po)
 
 
 @atomic
@@ -189,15 +186,15 @@ def process_prepared_payment_transfer_signal(
     ))
 
 
-def _create_payment_order(
+def _make_payment_order(
         fo: FormalOffer,
         payer_creditor_id: int,
         payer_payment_order_seqnum: int,
         debtor_id: int,
         amount: int,
         proof_secret: bytes,
-        payer_note: dict) -> PaymentOrder:
-    po = PaymentOrder(
+        payer_note: dict) -> None:
+    payment_order = PaymentOrder(
         payee_creditor_id=fo.payee_creditor_id,
         offer_id=fo.offer_id,
         payer_creditor_id=payer_creditor_id,
@@ -209,9 +206,15 @@ def _create_payment_order(
         payer_note=payer_note,
         proof_secret=proof_secret,
     )
+    if datetime.now(tz=timezone.utc) > fo.valid_until_ts:
+        _abort_payment_order(
+            payment_order,
+            abort_reason={'error_code': 'PAY006', 'message': 'The offer has expired.'},
+        )
     with db.retry_on_integrity_error():
-        db.session.add(po)
-    return po
+        db.session.add(payment_order)
+    if payment_order.finalized_at_ts is None:
+        _try_to_finalize_payment_order(payment_order)
 
 
 def _abort_unfinalized_payment_orders(fo: FormalOffer) -> None:
