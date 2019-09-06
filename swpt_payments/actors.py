@@ -186,8 +186,6 @@ def on_prepared_payment_transfer_signal(
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
 def on_rejected_payment_transfer_signal(
-        debtor_id: int,
-        signal_id: int,
         coordinator_type: str,
         coordinator_id: int,
         coordinator_request_id: int,
