@@ -18,7 +18,7 @@ def create_formal_offer(payee_creditor_id: int,
                         valid_until_ts: datetime,
                         description: Optional[dict] = None,
                         reciprocal_payment_debtor_id: Optional[int] = None,
-                        reciprocal_payment_amount: int = 0) -> None:
+                        reciprocal_payment_amount: int = 0) -> FormalOffer:
     assert MIN_INT64 <= payee_creditor_id <= MAX_INT64
     assert MIN_INT64 <= offer_announcement_id <= MAX_INT64
     assert len(debtor_ids) == len(debtor_amounts)
@@ -48,6 +48,7 @@ def create_formal_offer(payee_creditor_id: int,
         offer_secret=offer_secret,
         offer_created_at_ts=formal_offer.created_at_ts,
     ))
+    return formal_offer
 
 
 @atomic
