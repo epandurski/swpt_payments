@@ -133,6 +133,7 @@ def test_make_payment_order(db_session, offer, payment_order):
     assert po.payment_transfer_id is None
     assert po.reciprocal_payment_transfer_id is None
     assert po.finalized_at_ts is None
+
     pts = PrepareTransferSignal.query.one()
     assert pts.payee_creditor_id == po.payee_creditor_id
     assert pts.coordinator_request_id == po.payment_coordinator_request_id
@@ -141,14 +142,28 @@ def test_make_payment_order(db_session, offer, payment_order):
     assert pts.sender_creditor_id == po.payer_creditor_id
     assert pts.recipient_creditor_id == po.payee_creditor_id
 
+    p.process_rejected_payment_transfer_signal(
+        po.payee_creditor_id, po.payment_coordinator_request_id, {'error_code': '123456'})
+    po = PaymentOrder.query.one()
+    assert po.finalized_at_ts is not None
+
+    fps = FailedPaymentSignal.query.one()
+    assert fps.payee_creditor_id == po.payee_creditor_id
+    assert fps.offer_id == offer.offer_id
+    assert fps.payer_creditor_id == po.payer_creditor_id
+    assert fps.payer_payment_order_seqnum == po.payer_payment_order_seqnum
+    assert fps.details['error_code'] == '123456'
+
 
 def test_cancel_formal_offer(db_session, offer, payment_order):
     p.cancel_formal_offer(offer.payee_creditor_id, offer.offer_id, offer.offer_secret)
     cfos = CanceledFormalOfferSignal.query.one()
     assert cfos.payee_creditor_id == offer.payee_creditor_id
     assert cfos.offer_id == offer.offer_id
+
     po = PaymentOrder.query.one()
     assert po.finalized_at_ts is not None
+
     fps = FailedPaymentSignal.query.one()
     assert fps.payee_creditor_id == po.payee_creditor_id
     assert fps.offer_id == offer.offer_id
