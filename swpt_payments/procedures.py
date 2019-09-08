@@ -256,7 +256,8 @@ def _abort_payment_order(po: PaymentOrder, abort_reason: dict) -> None:
             committed_amount=0,
             transfer_info={},
         ))
-    if po.reciprocal_payment_transfer_id is not None:
+    if po.reciprocal_payment_transfer_id is not None:  # pragma: no cover
+        # Normally, this should never happen.
         db.session.add(FinalizePreparedTransferSignal(
             payee_creditor_id=po.payee_creditor_id,
             debtor_id=po.reciprocal_payment_debtor_id,
