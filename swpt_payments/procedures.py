@@ -136,7 +136,7 @@ def process_rejected_payment_transfer_signal(
         details: dict) -> None:
     po, is_reciprocal_payment = _find_payment_order(coordinator_id, coordinator_request_id)
     if po and po.finalized_at_ts is None:
-        if is_reciprocal_payment:  # pragma: no cover
+        if is_reciprocal_payment:
             details = {'error_code': 'PAY005', 'message': 'Can not make a reciprocal payment.'}
         _abort_payment_order(po, abort_reason=details)
 

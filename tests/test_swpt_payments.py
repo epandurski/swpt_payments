@@ -4,7 +4,7 @@ from swpt_payments import __version__
 from swpt_payments import procedures as p
 from swpt_payments.models import FormalOffer, CreatedFormalOfferSignal, PaymentOrder, CanceledFormalOfferSignal, \
     FailedPaymentSignal, PrepareTransferSignal, FinalizePreparedTransferSignal, SuccessfulPaymentSignal, \
-    PaymentProof
+    PaymentProof, get_now_utc
 
 
 def test_version(db_session):
@@ -22,6 +22,10 @@ PAYER_PAYMENT_ORDER_SEQNUM = 8765
 AMOUNT1 = 1000
 AMOUNT2 = 2000
 AMOUNT3 = 500
+
+
+def test_get_now_utc():
+    assert isinstance(get_now_utc(), datetime)
 
 
 @pytest.fixture(params=['simple', 'swap'])
@@ -278,3 +282,33 @@ def test_successful_payment(db_session, offer, payment_order):
         po.debtor_id, po.payer_creditor_id, 222, po.payee_creditor_id,
         AMOUNT1, coordinator_id, coordinator_request_id)
     assert len(FinalizePreparedTransferSignal.query.all()) == num_prepared_transfers + 1
+    assert len(FinalizePreparedTransferSignal.query.filter_by(committed_amount=0).all()) == 1
+
+
+def test_unsuccessful_payment(db_session, offer, payment_order):
+    po = payment_order
+    coordinator_id = po.payee_creditor_id
+    coordinator_request_id = po.payment_coordinator_request_id
+    if offer.reciprocal_payment_amount == 0:
+        p.process_rejected_payment_transfer_signal(coordinator_id, coordinator_request_id, {'error_code': 'TEST1'})
+        assert len(FinalizePreparedTransferSignal.query.all()) == 0
+    else:
+        p.process_prepared_payment_transfer_signal(
+            po.debtor_id, po.payer_creditor_id, 333, po.payee_creditor_id,
+            AMOUNT1, coordinator_id, coordinator_request_id)
+        p.process_rejected_payment_transfer_signal(coordinator_id, -coordinator_request_id, {'error_code': 'TEST2'})
+        assert len(FinalizePreparedTransferSignal.query.all()) == 1
+        assert len(FinalizePreparedTransferSignal.query.filter_by(committed_amount=0).all()) == 1
+
+    po = PaymentOrder.query.one()
+    assert po.finalized_at_ts is not None
+    assert po.payer_note is None
+    assert po.proof_secret is None
+    assert len(PaymentProof.query.all()) == 0
+
+    fps = FailedPaymentSignal.query.one()
+    assert fps.payee_creditor_id == offer.payee_creditor_id
+    assert fps.offer_id == offer.offer_id
+    assert fps.payer_creditor_id == C_ID + 1
+    assert fps.payer_payment_order_seqnum == PAYER_PAYMENT_ORDER_SEQNUM
+    assert fps.details['error_code'] == ('TEST1' if offer.reciprocal_payment_amount == 0 else 'PAY005')
