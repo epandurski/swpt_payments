@@ -82,6 +82,8 @@ def make_payment_order(
     assert MIN_INT64 <= offer_id <= MAX_INT64
     assert MIN_INT64 <= payer_creditor_id <= MAX_INT64
     assert MIN_INT64 <= payer_payment_order_seqnum <= MAX_INT64
+    assert proof_secret is not None
+    assert payer_note is not None
 
     def failure(**kw) -> None:
         db.session.add(FailedPaymentSignal(

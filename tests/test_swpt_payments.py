@@ -17,6 +17,7 @@ PROOF_SECRET = b'123'
 DESCRIPTION = {'message': 'test'}
 VALID_UNTIL_TS = datetime(2099, 1, 1, tzinfo=timezone.utc)
 OFFER_ANNOUNCEMENT_ID = 4567
+PAYER_PAYMENT_ORDER_SEQNUM = 8765
 AMOUNT1 = 1000
 AMOUNT2 = 2000
 AMOUNT3 = 500
@@ -35,8 +36,8 @@ def offer(request):
 
 @pytest.fixture
 def payment_order(offer):
-    p.make_payment_order(offer.payee_creditor_id, offer.offer_id, offer.offer_secret, C_ID + 1, 8765,
-                         D_ID, 1000, PROOF_SECRET, PAYER_NOTE)
+    p.make_payment_order(offer.payee_creditor_id, offer.offer_id, offer.offer_secret, C_ID + 1,
+                         PAYER_PAYMENT_ORDER_SEQNUM, D_ID, 1000, PROOF_SECRET, PAYER_NOTE)
     return PaymentOrder.query.one()
 
 
@@ -63,13 +64,47 @@ def test_create_formal_offer(db_session, offer):
     assert cfos.offer_created_at_ts == fo.created_at_ts
 
 
+def test_make_payment_order_wrong_amount(db_session, offer):
+    p.make_payment_order(offer.payee_creditor_id, offer.offer_id, offer.offer_secret, C_ID + 1,
+                         PAYER_PAYMENT_ORDER_SEQNUM, D_ID, 1001, PROOF_SECRET, PAYER_NOTE)
+    assert len(PaymentOrder.query.all()) == 0
+    fps = FailedPaymentSignal.query.one()
+    assert fps.payee_creditor_id == offer.payee_creditor_id
+    assert fps.offer_id == offer.offer_id
+    assert fps.payer_creditor_id == C_ID + 1
+    assert fps.payer_payment_order_seqnum == PAYER_PAYMENT_ORDER_SEQNUM
+    assert fps.details['error_code'] == 'PAY003'
+
+
+def test_make_payment_order_wrong_debtor(db_session, offer):
+    p.make_payment_order(offer.payee_creditor_id, offer.offer_id, offer.offer_secret, C_ID + 1,
+                         PAYER_PAYMENT_ORDER_SEQNUM, D_ID - 10, 1000, PROOF_SECRET, PAYER_NOTE)
+    assert len(PaymentOrder.query.all()) == 0
+    fps = FailedPaymentSignal.query.one()
+    assert fps.details['error_code'] == 'PAY002'
+
+
+def test_make_payment_order_wrong_offer(db_session, offer):
+    p.make_payment_order(offer.payee_creditor_id, offer.offer_id + 1, offer.offer_secret, C_ID + 1,
+                         PAYER_PAYMENT_ORDER_SEQNUM, D_ID, 1000, PROOF_SECRET, PAYER_NOTE)
+    assert len(PaymentOrder.query.all()) == 0
+    fps = FailedPaymentSignal.query.one()
+    assert fps.details['error_code'] == 'PAY001'
+
+
+def test_make_payment_order_wrong_secret(db_session, offer):
+    with pytest.raises(Exception):
+        p.make_payment_order(offer.payee_creditor_id, offer.offer_id, offer.offer_secret, C_ID + 1,
+                             PAYER_PAYMENT_ORDER_SEQNUM, D_ID, 1000, None, PAYER_NOTE)
+
+
 def test_make_payment_order(db_session, offer, payment_order):
     fo = offer
     po = payment_order
     assert po.payee_creditor_id == fo.payee_creditor_id
     assert po.offer_id == fo.offer_id
     assert po.payer_creditor_id == C_ID + 1
-    assert po.payer_payment_order_seqnum == 8765
+    assert po.payer_payment_order_seqnum == PAYER_PAYMENT_ORDER_SEQNUM
     assert po.debtor_id == D_ID
     assert po.amount == 1000
     assert po.reciprocal_payment_debtor_id == fo.reciprocal_payment_debtor_id
