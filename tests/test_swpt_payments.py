@@ -167,6 +167,7 @@ def test_successful_payment(db_session, offer, payment_order):
     if offer.reciprocal_payment_amount == 0:
         po.finalized_at_ts is not None
         fpts = FinalizePreparedTransferSignal.query.one()
+        num_prepared_transfers = 1
         assert fpts.payee_creditor_id == po.payee_creditor_id
         assert fpts.debtor_id == po.debtor_id
         assert fpts.sender_creditor_id == po.payer_creditor_id
@@ -190,6 +191,7 @@ def test_successful_payment(db_session, offer, payment_order):
 
     else:
         assert len(PrepareTransferSignal.query.all()) == 2
+        num_prepared_transfers = 2
         pts = PrepareTransferSignal.query.filter_by(coordinator_request_id=-coordinator_request_id).one()
         assert pts.payee_creditor_id == po.payee_creditor_id
         assert pts.min_amount == pts.max_amount == po.reciprocal_payment_amount == AMOUNT3
@@ -199,6 +201,15 @@ def test_successful_payment(db_session, offer, payment_order):
         p.process_prepared_payment_transfer_signal(
             po.reciprocal_payment_debtor_id, po.payee_creditor_id, 444, po.payer_creditor_id,
             AMOUNT3, coordinator_id, -coordinator_request_id)
+
+        # Message re-deliveries should be fine.
+        p.process_prepared_payment_transfer_signal(
+            po.reciprocal_payment_debtor_id, po.payee_creditor_id, 444, po.payer_creditor_id,
+            AMOUNT3, coordinator_id, -coordinator_request_id)
+        p.process_prepared_payment_transfer_signal(
+            po.debtor_id, po.payer_creditor_id, 333, po.payee_creditor_id,
+            AMOUNT1, coordinator_id, coordinator_request_id)
+
         po = PaymentOrder.query.one()
         po.finalized_at_ts is not None
         assert len(FinalizePreparedTransferSignal.query.all()) == 2
@@ -246,3 +257,9 @@ def test_successful_payment(db_session, offer, payment_order):
     # Canceling the paid offer should do nothing.
     p.cancel_formal_offer(offer.payee_creditor_id, offer.offer_id, offer.offer_secret)
     assert len(CanceledFormalOfferSignal.query.all()) == 0
+
+    # Process orphan prepared transfer signal.
+    p.process_prepared_payment_transfer_signal(
+        po.debtor_id, po.payer_creditor_id, 222, po.payee_creditor_id,
+        AMOUNT1, coordinator_id, coordinator_request_id)
+    assert len(FinalizePreparedTransferSignal.query.all()) == num_prepared_transfers + 1
