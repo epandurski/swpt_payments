@@ -2,7 +2,8 @@ import pytest
 from datetime import datetime, timezone
 from swpt_payments import __version__
 from swpt_payments import procedures as p
-from swpt_payments.models import FormalOffer, CreatedFormalOfferSignal, PaymentOrder
+from swpt_payments.models import FormalOffer, CreatedFormalOfferSignal, PaymentOrder, CanceledFormalOfferSignal, \
+    FailedPaymentSignal
 
 
 def test_version(db_session):
@@ -13,17 +14,22 @@ D_ID = -1
 C_ID = 1
 PAYER_NOTE = {'note': 'a note'}
 PROOF_SECRET = b'123'
+DESCRIPTION = {'message': 'test'}
+VALID_UNTIL_TS = datetime(2099, 1, 1, tzinfo=timezone.utc)
+OFFER_ANNOUNCEMENT_ID = 4567
+AMOUNT1 = 1000
+AMOUNT2 = 2000
+AMOUNT3 = 500
 
 
 @pytest.fixture(params=['simple', 'swap'])
 def offer(request):
-    valid_until_ts = datetime(2099, 1, 1, tzinfo=timezone.utc)
     if request.param == 'simple':
         return p.create_formal_offer(
-            C_ID, 1, [D_ID, D_ID - 1], [1000, 2000], valid_until_ts, {'message': 'test'})
+            C_ID, OFFER_ANNOUNCEMENT_ID, [D_ID, D_ID - 1], [AMOUNT1, AMOUNT2], VALID_UNTIL_TS, DESCRIPTION)
     elif request.param == 'swap':
         return p.create_formal_offer(
-            C_ID, 1, [D_ID, D_ID - 1], [1000, 2000], valid_until_ts, None, D_ID - 2, 500)
+            C_ID, OFFER_ANNOUNCEMENT_ID, [D_ID, D_ID - 1], [AMOUNT1, AMOUNT2], VALID_UNTIL_TS, None, D_ID - 2, AMOUNT3)
     raise Exception()
 
 
@@ -34,29 +40,25 @@ def payment_order(offer):
     return PaymentOrder.query.one()
 
 
-def test_create_formal_offer(db_session):
-    now = datetime.now(tz=timezone.utc)
-    valid_until_ts = datetime(2099, 1, 1, tzinfo=timezone.utc)
-    description = {'message': 'test'}
-    p.create_formal_offer(
-        C_ID, 4567, [D_ID, D_ID - 1], [1000, 2000], valid_until_ts, description, D_ID - 2, 500)
+def test_create_formal_offer(db_session, offer):
+    fo = offer
     offers = FormalOffer.query.all()
     assert len(offers) == 1
-    fo = offers[0]
+    assert fo.offer_id == offers[0].offer_id
     assert fo.payee_creditor_id == C_ID
     assert fo.debtor_ids == [D_ID, D_ID - 1]
-    assert fo.debtor_amounts == [1000, 2000]
-    assert fo.valid_until_ts == valid_until_ts
-    assert fo.description == description
-    assert fo.reciprocal_payment_debtor_id == D_ID - 2
-    assert fo.reciprocal_payment_amount == 500
+    assert fo.debtor_amounts == [AMOUNT1, AMOUNT2]
+    assert fo.valid_until_ts == VALID_UNTIL_TS
+    assert fo.description in [None, DESCRIPTION]
+    assert fo.reciprocal_payment_debtor_id in [D_ID - 2, None]
+    assert fo.reciprocal_payment_amount in [AMOUNT3, 0]
     assert fo.offer_id is not None
     assert len(fo.offer_secret) > 5
-    assert fo.created_at_ts >= now
+    assert isinstance(fo.created_at_ts, datetime)
     cfos = CreatedFormalOfferSignal.query.one()
     assert cfos.payee_creditor_id == fo.payee_creditor_id
     assert cfos.offer_id == fo.offer_id
-    assert cfos.offer_announcement_id == 4567
+    assert cfos.offer_announcement_id == OFFER_ANNOUNCEMENT_ID
     assert cfos.offer_secret == fo.offer_secret
     assert cfos.offer_created_at_ts == fo.created_at_ts
 
@@ -78,3 +80,18 @@ def test_make_payment_order(db_session, offer, payment_order):
     assert po.payment_transfer_id is None
     assert po.reciprocal_payment_transfer_id is None
     assert po.finalized_at_ts is None
+
+
+def test_cancel_formal_offer(db_session, offer, payment_order):
+    p.cancel_formal_offer(offer.payee_creditor_id, offer.offer_id, offer.offer_secret)
+    cfos = CanceledFormalOfferSignal.query.one()
+    assert cfos.payee_creditor_id == offer.payee_creditor_id
+    assert cfos.offer_id == offer.offer_id
+    po = PaymentOrder.query.one()
+    assert po.finalized_at_ts is not None
+    fps = FailedPaymentSignal.query.one()
+    assert fps.payee_creditor_id == po.payee_creditor_id
+    assert fps.offer_id == offer.offer_id
+    assert fps.payer_creditor_id == po.payer_creditor_id
+    assert fps.payer_payment_order_seqnum == po.payer_payment_order_seqnum
+    assert fps.details['error_code'] == 'PAY004'
