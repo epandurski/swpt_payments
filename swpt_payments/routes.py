@@ -28,16 +28,22 @@ class OfferAPI(MethodView):
     def get(self, payee_creditor_id, offer_id, offer_secret):
         offer_secret = urlsafe_b64decode(offer_secret)
         offer = procedures.get_formal_offer(payee_creditor_id, offer_id, offer_secret) or abort(404)
-        account_json = json.dumps(offer_schema.dump(offer))
-        return account_json, 200, {'Content-Type': 'application/json'}
+        offer_json = json.dumps(offer_schema.dump(offer))
+        return offer_json, 200, {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=31536000',
+        }
 
 
 class ProofAPI(MethodView):
     def get(self, payee_creditor_id, proof_id, proof_secret):
         proof_secret = urlsafe_b64decode(proof_secret)
         proof = procedures.get_payment_proof(payee_creditor_id, proof_id, proof_secret) or abort(404)
-        account_json = json.dumps(proof_schema.dump(proof))
-        return account_json, 200, {'Content-Type': 'application/json'}
+        proof_json = json.dumps(proof_schema.dump(proof))
+        return proof_json, 200, {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=31536000',
+        }
 
 
 web_api.add_url_rule(

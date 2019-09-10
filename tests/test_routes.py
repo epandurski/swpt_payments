@@ -46,6 +46,7 @@ def test_get_offer(client, offer):
     r = client.get(f'/api/payments/{offer.payee_creditor_id}/offers/{offer.offer_id}/{offer_secret}/')
     assert r.status_code == 200
     assert r.content_type == 'application/json'
+    assert 'max-age=' in r.headers['Cache-Control']
     assert json.loads(r.data)['description'] == offer.description
 
 
@@ -57,4 +58,5 @@ def test_get_proof(client, proof):
     r = client.get(f'/api/payments/{proof.payee_creditor_id}/proofs/{proof.proof_id}/{proof_secret}/')
     assert r.status_code == 200
     assert r.content_type == 'application/json'
+    assert 'max-age=' in r.headers['Cache-Control']
     assert json.loads(r.data)['amount'] == proof.amount
