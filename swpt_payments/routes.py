@@ -46,6 +46,9 @@ class ProofAPI(MethodView):
         }
 
 
+# TODO: Add an endpoint that returns the proof with a JSON Web Signature.
+
+
 web_api.add_url_rule(
     '/payments/<int:payee_creditor_id>/offers/<int:offer_id>/<offer_secret>/',
     view_func=OfferAPI.as_view('show_offer'),
