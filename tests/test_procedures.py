@@ -272,6 +272,7 @@ def test_successful_payment(db_session, offer, payment_order):
     assert pp.offer_id == offer.offer_id
     assert pp.offer_created_at_ts == offer.created_at_ts
     assert pp.offer_description == offer.description
+    assert p.get_payment_proof(offer.payee_creditor_id, proof_id, PROOF_SECRET) is pp
 
     # Canceling the paid offer should do nothing.
     p.cancel_formal_offer(offer.payee_creditor_id, offer.offer_id, offer.offer_secret)
@@ -312,3 +313,8 @@ def test_unsuccessful_payment(db_session, offer, payment_order):
     assert fps.payer_creditor_id == C_ID + 1
     assert fps.payer_payment_order_seqnum == PAYER_PAYMENT_ORDER_SEQNUM
     assert fps.details['error_code'] == ('TEST1' if offer.reciprocal_payment_amount == 0 else 'PAY005')
+
+
+def test_get_formal_offer(db_session, offer):
+    o = p.get_formal_offer(offer.payee_creditor_id, offer.offer_id, offer.offer_secret)
+    assert isinstance(o, FormalOffer)
