@@ -59,9 +59,9 @@ def flush_payment_orders(days):
 
     """
 
-    # TODO: Make sure this command is executed periodically. Note that
-    # the current method of flushing may consume considerable amount
-    # of database resources for quite some time. This could
+    # TODO: Make sure payment orders are flushed periodically. Note
+    # that the current method of flushing may consume considerable
+    # amount of database resources for quite some time. This could
     # potentially be a problem.
 
     days = days or int(environ.get('APP_FLUSH_PAYMENT_ORDERS_DAYS', '30'))
@@ -85,9 +85,9 @@ def flush_payment_proofs(days):
 
     """
 
-    # TODO: Make sure this command is executed periodically. Note that
-    # the current method of flushing may consume considerable amount
-    # of database resources for quite some time. This could
+    # TODO: Make sure payment proofs are flushed periodically. Note
+    # that the current method of flushing may consume considerable
+    # amount of database resources for quite some time. This could
     # potentially be a problem.
 
     days = days or int(environ.get('APP_FLUSH_PAYMENT_PROOFS_DAYS', '180'))
