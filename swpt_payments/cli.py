@@ -1,6 +1,8 @@
 import click
 from os import environ
+from datetime import datetime, timezone, timedelta
 from flask.cli import with_appcontext
+from . import procedures
 
 
 @click.group('swpt_payments')
@@ -43,3 +45,28 @@ def subscribe(queue_name):  # pragma: no cover
             else:
                 unbind(queue_name, MAIN_EXCHANGE_NAME, routing_key)
                 click.echo(f'Unsubscribed "{queue_name}" from "{MAIN_EXCHANGE_NAME}.{routing_key}".')
+
+
+@swpt_payments.command('flush_payment_orders')
+@with_appcontext
+@click.option('-d', '--days', type=float, help='The number of days.')
+def flush_payment_orders(days):
+    """Delete finalized payment orders older than a given number of days.
+
+    If the number of days is not specified, the value of the
+    environment variable APP_FLUSH_PAYMENT_ORDERS_DAYS is taken. If it
+    is not set, the default number of days is 30.
+
+    """
+
+    # TODO: The current method of flushing may consume considerable
+    # amount of database resources for quite some time. This could
+    # potentially be a problem.
+
+    days = days or int(environ.get('APP_FLUSH_PAYMENT_ORDERS_DAYS', '30'))
+    cutoff_ts = datetime.now(tz=timezone.utc) - timedelta(days=days)
+    n = procedures.flush_payment_orders(cutoff_ts)
+    if n == 1:
+        click.echo(f'1 payment order has been deleted.')
+    elif n > 1:
+        click.echo(f'{n} payment orders have been deleted.')
