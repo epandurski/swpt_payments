@@ -212,6 +212,11 @@ def flush_payment_orders(cutoff_ts: datetime) -> int:
     return PaymentOrder.query.filter(PaymentOrder.finalized_at_ts <= cutoff_ts).delete()
 
 
+@atomic
+def flush_payment_proofs(cutoff_ts: datetime) -> int:
+    return PaymentProof.query.filter(PaymentProof.paid_at_ts <= cutoff_ts).delete()
+
+
 def _make_payment_order(
         fo: FormalOffer,
         payer_creditor_id: int,

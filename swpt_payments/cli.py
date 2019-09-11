@@ -70,3 +70,28 @@ def flush_payment_orders(days):
         click.echo(f'1 payment order has been deleted.')
     elif n > 1:
         click.echo(f'{n} payment orders have been deleted.')
+
+
+@swpt_payments.command('flush_payment_proofs')
+@with_appcontext
+@click.option('-d', '--days', type=float, help='The number of days.')
+def flush_payment_proofs(days):
+    """Delete payment proofs older than a given number of days.
+
+    If the number of days is not specified, the value of the
+    environment variable APP_FLUSH_PAYMENT_PROOFS_DAYS is taken. If it
+    is not set, the default number of days is 180.
+
+    """
+
+    # TODO: The current method of flushing may consume considerable
+    # amount of database resources for quite some time. This could
+    # potentially be a problem.
+
+    days = days or int(environ.get('APP_FLUSH_PAYMENT_PROOFS_DAYS', '180'))
+    cutoff_ts = datetime.now(tz=timezone.utc) - timedelta(days=days)
+    n = procedures.flush_payment_proofs(cutoff_ts)
+    if n == 1:
+        click.echo(f'1 payment proof has been deleted.')
+    elif n > 1:
+        click.echo(f'{n} payment proofs have been deleted.')
