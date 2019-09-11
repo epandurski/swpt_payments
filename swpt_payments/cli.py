@@ -59,8 +59,9 @@ def flush_payment_orders(days):
 
     """
 
-    # TODO: The current method of flushing may consume considerable
-    # amount of database resources for quite some time. This could
+    # TODO: Make sure this command is executed periodically. Note that
+    # the current method of flushing may consume considerable amount
+    # of database resources for quite some time. This could
     # potentially be a problem.
 
     days = days or int(environ.get('APP_FLUSH_PAYMENT_ORDERS_DAYS', '30'))
@@ -68,7 +69,7 @@ def flush_payment_orders(days):
     n = procedures.flush_payment_orders(cutoff_ts)
     if n == 1:
         click.echo(f'1 payment order has been deleted.')
-    elif n > 1:
+    elif n > 1:  # pragma: nocover
         click.echo(f'{n} payment orders have been deleted.')
 
 
@@ -84,8 +85,9 @@ def flush_payment_proofs(days):
 
     """
 
-    # TODO: The current method of flushing may consume considerable
-    # amount of database resources for quite some time. This could
+    # TODO: Make sure this command is executed periodically. Note that
+    # the current method of flushing may consume considerable amount
+    # of database resources for quite some time. This could
     # potentially be a problem.
 
     days = days or int(environ.get('APP_FLUSH_PAYMENT_PROOFS_DAYS', '180'))
@@ -93,5 +95,5 @@ def flush_payment_proofs(days):
     n = procedures.flush_payment_proofs(cutoff_ts)
     if n == 1:
         click.echo(f'1 payment proof has been deleted.')
-    elif n > 1:
+    elif n > 1:  # pragma: nocover
         click.echo(f'{n} payment proofs have been deleted.')
