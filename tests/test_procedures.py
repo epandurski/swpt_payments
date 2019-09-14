@@ -193,6 +193,7 @@ def test_successful_payment(db_session, offer, payment_order):
         assert fpts.transfer_id == 333
         assert fpts.committed_amount == AMOUNT1
         assert fpts.transfer_info['offer_id'] == po.offer_id
+        assert fpts.transfer_info['is_reciprocal_payment'] is False
 
         spts = SuccessfulPaymentSignal.query.one()
         assert spts.payee_creditor_id == po.payee_creditor_id
@@ -239,6 +240,7 @@ def test_successful_payment(db_session, offer, payment_order):
         assert fpts.sender_creditor_id == po.payee_creditor_id
         assert fpts.committed_amount == AMOUNT3
         assert fpts.transfer_info['offer_id'] == po.offer_id
+        assert fpts.transfer_info['is_reciprocal_payment'] is True
 
         spts = SuccessfulPaymentSignal.query.one()
         assert spts.payee_creditor_id == po.payee_creditor_id

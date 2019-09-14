@@ -325,7 +325,7 @@ def _execute_payment_order(po: PaymentOrder) -> None:
             sender_creditor_id=po.payer_creditor_id,
             transfer_id=po.payment_transfer_id,
             committed_amount=po.amount,
-            transfer_info={'offer_id': po.offer_id},
+            transfer_info={'offer_id': po.offer_id, 'is_reciprocal_payment': False},
         ))
     if po.reciprocal_payment_transfer_id is not None:
         db.session.add(FinalizePreparedTransferSignal(
@@ -334,7 +334,7 @@ def _execute_payment_order(po: PaymentOrder) -> None:
             sender_creditor_id=po.payee_creditor_id,
             transfer_id=po.reciprocal_payment_transfer_id,
             committed_amount=po.reciprocal_payment_amount,
-            transfer_info={'offer_id': po.offer_id},
+            transfer_info={'offer_id': po.offer_id, 'is_reciprocal_payment': True},
         ))
     payer_note, proof_secret = _finalize_payment_order(po, datetime.now(tz=timezone.utc))
     _abort_unfinalized_payment_orders(formal_offer)
