@@ -19,6 +19,10 @@ def get_now_utc():
 class Signal(db.Model):
     __abstract__ = True
 
+    # TODO: Define `send_signalbus_messages` class method, set
+    #      `ModelClass.signalbus_autoflush = False` and
+    #      `ModelClass.signalbus_burst_count = N` in models.
+
     queue_name = None
 
     @property
