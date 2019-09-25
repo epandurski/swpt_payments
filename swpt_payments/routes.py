@@ -32,8 +32,9 @@ class OfferAPI(MethodView):
             urlsafe_b64decode(request.args.get('secret', '')) == offer.offer_secret or abort(403)
         except binascii.Error:
             abort(403)
-        offer_json = json.dumps(offer_schema.dump(offer))
-        return offer_json, 200, {
+        offer_dict = offer_schema.dump(offer)
+        offer_dict['self'] = request.base_url
+        return json.dumps(offer_dict), 200, {
             'Content-Type': 'application/json',
             'Cache-Control': 'public, max-age=31536000',
         }
@@ -46,8 +47,9 @@ class ProofAPI(MethodView):
             urlsafe_b64decode(request.args.get('secret', '')) == proof.proof_secret or abort(403)
         except binascii.Error:
             abort(403)
-        proof_json = json.dumps(proof_schema.dump(proof))
-        return proof_json, 200, {
+        proof_dict = proof_schema.dump(proof)
+        proof_dict['self'] = request.base_url
+        return json.dumps(proof_dict), 200, {
             'Content-Type': 'application/json',
             'Cache-Control': 'public, max-age=31536000',
         }
