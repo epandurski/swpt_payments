@@ -46,7 +46,9 @@ class ProofAPI(MethodView):
         }
 
 
-# TODO: Add an endpoint that returns the proof with a JSON Web Signature.
+# TODO: Add an endpoint that returns the proof with a JSON Web
+#       Signature. Or maybe use the same endpoint to return a JSON-LD
+#       proof (https://json-ld.org/) with a signature.
 
 
 web_api.add_url_rule(
