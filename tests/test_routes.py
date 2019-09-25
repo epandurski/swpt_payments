@@ -39,17 +39,17 @@ def proof(offer):
 
 
 def test_get_offer(client, offer):
-    r = client.get(f'/v1/payees/{offer.payee_creditor_id}/offers/{offer.offer_id}')
+    r = client.get(f'/v1/creditors/{offer.payee_creditor_id}/offers/{offer.offer_id}')
     assert r.status_code == 403
 
-    r = client.get(f'/v1/payees/{offer.payee_creditor_id}/offers/{offer.offer_id}?secret=x')
+    r = client.get(f'/v1/creditors/{offer.payee_creditor_id}/offers/{offer.offer_id}?secret=x')
     assert r.status_code == 403
 
-    r = client.get(f'/v1/payees/{offer.payee_creditor_id}/offers/{offer.offer_id}?secret=asdf')
+    r = client.get(f'/v1/creditors/{offer.payee_creditor_id}/offers/{offer.offer_id}?secret=asdf')
     assert r.status_code == 403
 
     offer_secret = urlsafe_b64encode(offer.offer_secret).decode()
-    r = client.get(f'/v1/payees/{offer.payee_creditor_id}/offers/{offer.offer_id}?secret={offer_secret}')
+    r = client.get(f'/v1/creditors/{offer.payee_creditor_id}/offers/{offer.offer_id}?secret={offer_secret}')
     assert r.status_code == 200
     assert r.content_type == 'application/json'
     assert 'max-age=' in r.headers['Cache-Control']
@@ -57,17 +57,17 @@ def test_get_offer(client, offer):
 
 
 def test_get_proof(client, proof):
-    r = client.get(f'/v1/payees/{proof.payee_creditor_id}/proofs/{proof.proof_id}')
+    r = client.get(f'/v1/creditors/{proof.payee_creditor_id}/payment-proofs/{proof.proof_id}')
     assert r.status_code == 403
 
-    r = client.get(f'/v1/payees/{proof.payee_creditor_id}/proofs/{proof.proof_id}?secret=x')
+    r = client.get(f'/v1/creditors/{proof.payee_creditor_id}/payment-proofs/{proof.proof_id}?secret=x')
     assert r.status_code == 403
 
-    r = client.get(f'/v1/payees/{proof.payee_creditor_id}/proofs/{proof.proof_id}?secret=asdf')
+    r = client.get(f'/v1/creditors/{proof.payee_creditor_id}/payment-proofs/{proof.proof_id}?secret=asdf')
     assert r.status_code == 403
 
     proof_secret = urlsafe_b64encode(proof.proof_secret).decode()
-    r = client.get(f'/v1/payees/{proof.payee_creditor_id}/proofs/{proof.proof_id}?secret={proof_secret}')
+    r = client.get(f'/v1/creditors/{proof.payee_creditor_id}/payment-proofs/{proof.proof_id}?secret={proof_secret}')
     assert r.status_code == 200
     assert r.content_type == 'application/json'
     assert 'max-age=' in r.headers['Cache-Control']

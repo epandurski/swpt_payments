@@ -59,10 +59,10 @@ class ProofAPI(MethodView):
 
 
 web_api.add_url_rule(
-    '/payees/<int:payee_creditor_id>/offers/<int:offer_id>',
+    '/creditors/<int:payee_creditor_id>/formal-offers/<int:offer_id>',
     view_func=OfferAPI.as_view('show_offer'),
 )
 web_api.add_url_rule(
-    '/payees/<int:payee_creditor_id>/proofs/<int:proof_id>',
+    '/creditors/<int:payee_creditor_id>/payment-proofs/<int:proof_id>',
     view_func=ProofAPI.as_view('show_proof'),
 )
