@@ -1,7 +1,8 @@
 import json
+import binascii
 from base64 import urlsafe_b64decode
 from marshmallow_sqlalchemy import ModelSchema
-from flask import Blueprint, abort
+from flask import Blueprint, abort, request
 from flask.views import MethodView
 from . import procedures
 from .models import FormalOffer, PaymentProof
@@ -25,9 +26,12 @@ web_api = Blueprint('web_api', __name__)
 
 
 class OfferAPI(MethodView):
-    def get(self, payee_creditor_id, offer_id, offer_secret):
-        offer_secret = urlsafe_b64decode(offer_secret)
-        offer = procedures.get_formal_offer(payee_creditor_id, offer_id, offer_secret) or abort(404)
+    def get(self, payee_creditor_id, offer_id):
+        offer = procedures.get_formal_offer(payee_creditor_id, offer_id) or abort(404)
+        try:
+            urlsafe_b64decode(request.args.get('secret', '')) == offer.offer_secret or abort(403)
+        except binascii.Error:
+            abort(403)
         offer_json = json.dumps(offer_schema.dump(offer))
         return offer_json, 200, {
             'Content-Type': 'application/json',
@@ -36,9 +40,12 @@ class OfferAPI(MethodView):
 
 
 class ProofAPI(MethodView):
-    def get(self, payee_creditor_id, proof_id, proof_secret):
-        proof_secret = urlsafe_b64decode(proof_secret)
-        proof = procedures.get_payment_proof(payee_creditor_id, proof_id, proof_secret) or abort(404)
+    def get(self, payee_creditor_id, proof_id):
+        proof = procedures.get_payment_proof(payee_creditor_id, proof_id) or abort(404)
+        try:
+            urlsafe_b64decode(request.args.get('secret', '')) == proof.proof_secret or abort(403)
+        except binascii.Error:
+            abort(403)
         proof_json = json.dumps(proof_schema.dump(proof))
         return proof_json, 200, {
             'Content-Type': 'application/json',
@@ -52,10 +59,10 @@ class ProofAPI(MethodView):
 
 
 web_api.add_url_rule(
-    '/payments/<int:payee_creditor_id>/offers/<int:offer_id>/<offer_secret>/',
+    '/payees/<int:payee_creditor_id>/offers/<int:offer_id>',
     view_func=OfferAPI.as_view('show_offer'),
 )
 web_api.add_url_rule(
-    '/payments/<int:payee_creditor_id>/proofs/<int:proof_id>/<proof_secret>/',
+    '/payees/<int:payee_creditor_id>/proofs/<int:proof_id>',
     view_func=ProofAPI.as_view('show_proof'),
 )

@@ -274,7 +274,7 @@ def test_successful_payment(db_session, offer, payment_order):
     assert pp.offer_id == offer.offer_id
     assert pp.offer_created_at_ts == offer.created_at_ts
     assert pp.offer_description == offer.description
-    assert p.get_payment_proof(offer.payee_creditor_id, proof_id, PROOF_SECRET) is pp
+    assert p.get_payment_proof(offer.payee_creditor_id, proof_id) is pp
 
     # Canceling the paid offer should do nothing.
     p.cancel_formal_offer(offer.payee_creditor_id, offer.offer_id, offer.offer_secret)
@@ -318,5 +318,6 @@ def test_unsuccessful_payment(db_session, offer, payment_order):
 
 
 def test_get_formal_offer(db_session, offer):
-    o = p.get_formal_offer(offer.payee_creditor_id, offer.offer_id, offer.offer_secret)
+    o = p.get_formal_offer(offer.payee_creditor_id, offer.offer_id)
     assert isinstance(o, FormalOffer)
+    assert o.offer_secret == offer.offer_secret

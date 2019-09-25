@@ -11,20 +11,18 @@ atomic: Callable[[T], T] = db.atomic
 
 
 @atomic
-def get_formal_offer(payee_creditor_id: int, offer_id: int, offer_secret: bytes) -> FormalOffer:
+def get_formal_offer(payee_creditor_id: int, offer_id: int) -> FormalOffer:
     return FormalOffer.query.filter_by(
         payee_creditor_id=payee_creditor_id,
         offer_id=offer_id,
-        offer_secret=offer_secret,
     ).one_or_none()
 
 
 @atomic
-def get_payment_proof(payee_creditor_id: int, proof_id: int, proof_secret: bytes) -> PaymentProof:
+def get_payment_proof(payee_creditor_id: int, proof_id: int) -> PaymentProof:
     return PaymentProof.query.filter_by(
         payee_creditor_id=payee_creditor_id,
         proof_id=proof_id,
-        proof_secret=proof_secret,
     ).one_or_none()
 
 
