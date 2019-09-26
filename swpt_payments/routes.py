@@ -7,11 +7,11 @@ from flask import Blueprint, abort, request, current_app
 from flask.views import MethodView
 from . import procedures
 
-TYPE_PATH = '/types/{}'
+CONTEXT_PATH = '/json-ld/{}'
 DEBTOR_PATH = '/debtors/{}'
 CREDITOR_PATH = '/creditors/{}'
-OFFER_PATH = CREDITOR_PATH + '/offers/{}'
-PROOF_PATH = CREDITOR_PATH + '/payments/{}'
+OFFER_PATH = CREDITOR_PATH + '/formal-offers/{}'
+PROOF_PATH = CREDITOR_PATH + '/payment-proofs/{}'
 
 
 def _get_debtor_url(debtor_id):
@@ -37,7 +37,7 @@ class JsonLdMixin:
         return type(obj).__name__
 
     def get_context(self, obj):
-        path = TYPE_PATH.format(self.get_type(obj))
+        path = CONTEXT_PATH.format(self.get_type(obj))
         return urljoin(current_app.config['BASE_URL'], path)
 
 
@@ -53,9 +53,6 @@ class OfferSchema(Schema, JsonLdMixin):
     def get_id(self, obj):
         path = OFFER_PATH.format(obj.payee_creditor_id, obj.offer_id)
         return urljoin(current_app.config['BASE_URL'], path)
-
-    def get_type(self, obj):
-        return 'Offer'
 
     def get_payment_options(self, obj):
         return [{
@@ -90,9 +87,6 @@ class ProofSchema(Schema, JsonLdMixin):
     def get_id(self, obj):
         path = PROOF_PATH.format(obj.payee_creditor_id, obj.proof_id)
         return urljoin(current_app.config['BASE_URL'], path)
-
-    def get_type(self, obj):
-        return 'Payment'
 
     def get_reciprocal_payment(self, obj):
         if obj.reciprocal_payment_debtor_id is None:
