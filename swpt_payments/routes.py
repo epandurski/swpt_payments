@@ -7,7 +7,7 @@ from flask import Blueprint, abort, request, current_app
 from flask.views import MethodView
 from . import procedures
 
-CONTEXT_PATH = '/json-ld/{}'
+CONTEXT_PATH = '/contexts/{}'
 DEBTOR_PATH = '/debtors/{}'
 CREDITOR_PATH = '/creditors/{}'
 OFFER_PATH = CREDITOR_PATH + '/formal-offers/{}'
@@ -15,17 +15,11 @@ PROOF_PATH = CREDITOR_PATH + '/payment-proofs/{}'
 
 
 def _get_debtor_url(debtor_id):
-    if debtor_id is None:
-        return missing
-    else:
-        return urljoin(current_app.config['BASE_URL'], DEBTOR_PATH.format(debtor_id))
+    return urljoin(current_app.config['BASE_URL'], DEBTOR_PATH.format(debtor_id))
 
 
 def _get_creditor_url(creditor_id):
-    if creditor_id is None:
-        return missing
-    else:
-        return urljoin(current_app.config['BASE_URL'], CREDITOR_PATH.format(creditor_id))
+    return urljoin(current_app.config['BASE_URL'], CREDITOR_PATH.format(creditor_id))
 
 
 class JsonLdMixin:
@@ -37,7 +31,8 @@ class JsonLdMixin:
         return type(obj).__name__
 
     def get_context(self, obj):
-        path = CONTEXT_PATH.format(self.get_type(obj))
+        filename = self.get_type(obj) + '.jsonld'
+        path = CONTEXT_PATH.format(filename)
         return urljoin(current_app.config['BASE_URL'], path)
 
 
@@ -58,7 +53,7 @@ class OfferSchema(Schema, JsonLdMixin):
         return [{
             '@type': 'PaymentDescription',
             'via': _get_debtor_url(debtor_id),
-            'amount': amount,
+            'amount': amount or 0,
         } for debtor_id, amount in zip(obj.debtor_ids, obj.debtor_amounts) if debtor_id is not None]
 
     def get_reciprocal_payment(self, obj):
