@@ -19,11 +19,6 @@ else:
     logging.basicConfig(level=logging.WARNING)
 
 
-def _get_default_base_url():
-    port = os.environ.get('PORT', '8000')
-    return f'http://localhost:{port}/'
-
-
 class Configuration(metaclass=MetaFlaskEnv):
     SECRET_KEY = 'dummy-secret'
     SQLALCHEMY_DATABASE_URI = ''
@@ -35,7 +30,6 @@ class Configuration(metaclass=MetaFlaskEnv):
     SQLALCHEMY_ECHO = False
     DRAMATIQ_BROKER_CLASS = 'RabbitmqBroker'
     DRAMATIQ_BROKER_URL = 'amqp://guest:guest@localhost:5672'
-    BASE_URL = _get_default_base_url()
 
 
 def create_app(config_dict={}):

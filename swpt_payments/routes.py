@@ -1,9 +1,8 @@
 import binascii
-from urllib.parse import urljoin
 from base64 import urlsafe_b64decode
 from marshmallow import fields, Schema
 from marshmallow.utils import missing
-from flask import Blueprint, abort, request, current_app
+from flask import Blueprint, abort, request
 from flask.views import MethodView
 from . import procedures
 
@@ -15,11 +14,11 @@ PROOF_PATH = '/payment-proofs/{}/{}'
 
 
 def _get_debtor_url(debtor_id):
-    return urljoin(current_app.config['BASE_URL'], DEBTOR_PATH.format(debtor_id))
+    return DEBTOR_PATH.format(debtor_id)
 
 
 def _get_creditor_url(creditor_id):
-    return urljoin(current_app.config['BASE_URL'], CREDITOR_PATH.format(creditor_id))
+    return CREDITOR_PATH.format(creditor_id)
 
 
 class JsonLdMixin:
@@ -32,8 +31,7 @@ class JsonLdMixin:
 
     def get_context(self, obj):
         filename = self.get_type(obj) + '.jsonld'
-        path = CONTEXT_PATH.format(filename)
-        return urljoin(current_app.config['BASE_URL'], path)
+        return CONTEXT_PATH.format(filename)
 
 
 class OfferSchema(Schema, JsonLdMixin):
@@ -46,8 +44,7 @@ class OfferSchema(Schema, JsonLdMixin):
     reciprocalPayment = fields.Method('get_reciprocal_payment')
 
     def get_id(self, obj):
-        path = OFFER_PATH.format(obj.payee_creditor_id, obj.offer_id)
-        return urljoin(current_app.config['BASE_URL'], path)
+        return OFFER_PATH.format(obj.payee_creditor_id, obj.offer_id)
 
     def get_payment_options(self, obj):
         return [{
@@ -80,8 +77,7 @@ class ProofSchema(Schema, JsonLdMixin):
     reciprocalPayment = fields.Method('get_reciprocal_payment')
 
     def get_id(self, obj):
-        path = PROOF_PATH.format(obj.payee_creditor_id, obj.proof_id)
-        return urljoin(current_app.config['BASE_URL'], path)
+        return PROOF_PATH.format(obj.payee_creditor_id, obj.proof_id)
 
     def get_reciprocal_payment(self, obj):
         if obj.reciprocal_payment_debtor_id is None:
