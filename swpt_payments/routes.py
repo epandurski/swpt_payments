@@ -7,11 +7,11 @@ from flask import Blueprint, abort, request, current_app
 from flask.views import MethodView
 from . import procedures
 
-CONTEXT_PATH = '/contexts/{}'
 DEBTOR_PATH = '/debtors/{}'
 CREDITOR_PATH = '/creditors/{}'
-OFFER_PATH = CREDITOR_PATH + '/formal-offers/{}'
-PROOF_PATH = CREDITOR_PATH + '/payment-proofs/{}'
+CONTEXT_PATH = '/public/contexts/{}'
+OFFER_PATH = '/public/formal-offers/{}/{}'
+PROOF_PATH = '/public/payment-proofs/{}/{}'
 
 
 def _get_debtor_url(debtor_id):
