@@ -42,7 +42,7 @@ class OfferSchema(Schema, JsonLdMixin):
     valid_until_ts = fields.DateTime(data_key='offerValidUntil')
     description = fields.Raw(data_key='offerDescription')
     payee = fields.Function(lambda obj: _get_creditor_url(obj.payee_creditor_id))
-    paymentOption = fields.Method('get_payment_options')
+    paymentOptions = fields.Method('get_payment_options')
     reciprocalPayment = fields.Method('get_reciprocal_payment')
 
     def get_id(self, obj):
