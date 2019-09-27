@@ -9,9 +9,9 @@ from . import procedures
 
 DEBTOR_PATH = '/debtors/{}'
 CREDITOR_PATH = '/creditors/{}'
-CONTEXT_PATH = '/public/contexts/{}'
-OFFER_PATH = '/public/formal-offers/{}/{}'
-PROOF_PATH = '/public/payment-proofs/{}/{}'
+CONTEXT_PATH = '/contexts/{}'
+OFFER_PATH = '/formal-offers/{}/{}'
+PROOF_PATH = '/payment-proofs/{}/{}'
 
 
 def _get_debtor_url(debtor_id):
