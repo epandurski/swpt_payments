@@ -4,7 +4,7 @@ from swpt_payments import __version__
 from swpt_payments import procedures as p
 from swpt_payments.models import FormalOffer, CreatedFormalOfferSignal, PaymentOrder, CanceledFormalOfferSignal, \
     FailedPaymentSignal, PrepareTransferSignal, FinalizePreparedTransferSignal, SuccessfulPaymentSignal, \
-    PaymentProof, get_now_utc
+    PaymentProof, FailedReciprocalPaymentSignal, get_now_utc
 
 
 def test_version(db_session):
@@ -315,6 +315,7 @@ def test_unsuccessful_payment(db_session, offer, payment_order):
     assert fps.payer_creditor_id == C_ID + 1
     assert fps.payer_payment_order_seqnum == PAYER_PAYMENT_ORDER_SEQNUM
     assert fps.details['error_code'] == ('TEST1' if offer.reciprocal_payment_amount == 0 else 'PAY005')
+    assert fps.details['error_code'] != 'PAY005' or FailedReciprocalPaymentSignal.query.one()
 
 
 def test_get_formal_offer(db_session, offer):

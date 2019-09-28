@@ -4,7 +4,7 @@ from typing import Optional, List, Tuple, TypeVar, Callable
 from .extensions import db
 from .models import FormalOffer, CreatedFormalOfferSignal, PaymentOrder, FinalizePreparedTransferSignal, \
     CanceledFormalOfferSignal, PrepareTransferSignal, FailedPaymentSignal, SuccessfulPaymentSignal, \
-    PaymentProof, MIN_INT64, MAX_INT64
+    PaymentProof, FailedReciprocalPaymentSignal, MIN_INT64, MAX_INT64
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -153,6 +153,11 @@ def process_rejected_payment_transfer_signal(
     po, is_reciprocal_payment = _find_payment_order(coordinator_id, coordinator_request_id)
     if po and po.finalized_at_ts is None:
         if is_reciprocal_payment:
+            db.session.add(FailedReciprocalPaymentSignal(
+                payee_creditor_id=po.payee_creditor_id,
+                offer_id=po.offer_id,
+                details=details,
+            ))
             details = {'error_code': 'PAY005', 'message': 'Can not make a reciprocal payment.'}
         _abort_payment_order(po, abort_reason=details)
 

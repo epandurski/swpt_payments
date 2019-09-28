@@ -265,6 +265,8 @@ class PaymentProof(db.Model):
 
 
 class CreatedFormalOfferSignal(Signal):
+    """Sent to the payee when a new offer has been created."""
+
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
     offer_announcement_id = db.Column(db.BigInteger, nullable=False)
@@ -280,11 +282,23 @@ class CreatedFormalOfferSignal(Signal):
 
 
 class CanceledFormalOfferSignal(Signal):
+    """Sent to the payee when an offer has been canceled."""
+
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
 
 
+class FailedReciprocalPaymentSignal(Signal):
+    """Sent to the payee when a reciprocal payment has failed."""
+
+    payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
+    offer_id = db.Column(db.BigInteger, primary_key=True)
+    details = db.Column(pg.JSON, nullable=False, default={})
+
+
 class SuccessfulPaymentSignal(Signal):
+    """Sent to the payee and the payer when an offer has been paid."""
+
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
     payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
@@ -307,6 +321,8 @@ class SuccessfulPaymentSignal(Signal):
 
 
 class FailedPaymentSignal(Signal):
+    """Sent to the payer when a payment order has failed."""
+
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
     payer_creditor_id = db.Column(db.BigInteger, primary_key=True)
