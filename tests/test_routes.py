@@ -12,10 +12,14 @@ def client(app, db_session):
     return app.test_client()
 
 
-@pytest.fixture(scope='function')
-def offer():
-    return procedures.create_formal_offer(
-        1, 2, [3, 4], [1000, 2000], datetime(2099, 1, 1, tzinfo=timezone.utc), {'text': 'test'})
+@pytest.fixture(scope='function', params=['simple', 'swap'])
+def offer(request):
+    now = datetime(2099, 1, 1, tzinfo=timezone.utc)
+    if request.param == 'simple':
+        return procedures.create_formal_offer(1, 2, [3, 4], [1000, 2000], now, {'text': 'test'})
+    elif request.param == 'swap':
+        return procedures.create_formal_offer(1, 2, [3, 4], [1000, 2000], now, None, 5)
+    raise Exception()
 
 
 @pytest.fixture(scope='function')
