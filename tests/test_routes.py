@@ -64,7 +64,7 @@ def test_get_offer(client, offer):
     assert contents['offerDescription'] == offer.description
 
 
-def test_get_proof(client, proof):
+def test_get_proof(client, offer, proof):
     r = client.get(f'/payment-proofs/{proof.payee_creditor_id}/{proof.proof_id}/')
     assert r.status_code == 404
 
@@ -84,3 +84,4 @@ def test_get_proof(client, proof):
     assert contents['@type'] == 'PaymentProof'
     assert '@context' in contents
     assert contents['paidAmount'] == proof.amount
+    assert contents['offerDescription'] == offer.description
