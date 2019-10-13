@@ -69,7 +69,7 @@ class FormalOffer(db.Model):
         nullable=False,
         comment='The payment should go through one of these debtors. Each element in this array '
                 'must have a corresponding element in the `debtor_amounts` array. Note that'
-                'the database schema allows some or all of the elements to be `None`, which '
+                'the database schema allows some or all of the elements to be `NULL`, which '
                 'should be handled with care.',
     )
     debtor_amounts = db.Column(
@@ -80,7 +80,7 @@ class FormalOffer(db.Model):
                 'occur more than once in the `debtor_ids` array, each time with a different '
                 'corresponding amount. The payer is expected to transfer one of the amounts '
                 'corresponding to the chosen debtor. Also note that the database schema allows '
-                'some or all of the `debtor_amounts` elements to be `None` or negative '
+                'some or all of the `debtor_amounts` elements to be `NULL` or negative '
                 'numbers, which should be handled as if they were zeros.',
     )
     description = db.Column(
