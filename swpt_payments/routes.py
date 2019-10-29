@@ -52,6 +52,7 @@ class OfferSchema(Schema, JsonLdMixin):
 
     def get_payment_options(self, obj):
         return [{
+            '@context': CONTEXT_PATH.format('PaymentDescription.jsonld'),
             '@type': 'PaymentDescription',
             'via': _get_debtor_url(debtor_id),
             'amount': amount or 0,
@@ -62,6 +63,7 @@ class OfferSchema(Schema, JsonLdMixin):
             return missing
         else:
             return {
+                '@context': CONTEXT_PATH.format('PaymentDescription.jsonld'),
                 '@type': 'PaymentDescription',
                 'via': _get_debtor_url(obj.reciprocal_payment_debtor_id),
                 'amount': obj.reciprocal_payment_amount,
@@ -92,6 +94,7 @@ class ProofSchema(Schema, JsonLdMixin):
             return missing
         else:
             return {
+                '@context': CONTEXT_PATH.format('PaymentDescription.jsonld'),
                 '@type': 'PaymentDescription',
                 'via': _get_debtor_url(obj.reciprocal_payment_debtor_id),
                 'amount': obj.reciprocal_payment_amount,
@@ -111,7 +114,7 @@ class OfferAPI(MethodView):
         except binascii.Error:
             abort(404)
         return offer_schema.dumps(offer), 200, {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/ld+json',
             'Cache-Control': 'public, max-age=31536000',
         }
 
@@ -124,7 +127,7 @@ class ProofAPI(MethodView):
         except binascii.Error:
             abort(404)
         return proof_schema.dumps(proof), 200, {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/ld+json',
             'Cache-Control': 'public, max-age=31536000',
         }
 

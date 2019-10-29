@@ -55,13 +55,18 @@ def test_get_offer(client, offer):
     offer_secret = urlsafe_b64encode(offer.offer_secret).decode()
     r = client.get(f'/formal-offers/{offer.payee_creditor_id}/{offer.offer_id}/{offer_secret}')
     assert r.status_code == 200
-    assert r.content_type == 'application/json'
+    assert r.content_type == 'application/ld+json'
     assert 'max-age=' in r.headers['Cache-Control']
     contents = json.loads(r.data)
     assert contents['@id'].endswith(f'/formal-offers/{offer.payee_creditor_id}/{offer.offer_id}/{offer_secret}')
     assert contents['@type'] == 'FormalOffer'
     assert '@context' in contents
     assert contents['offerDescription'] == offer.description
+    assert len(contents['paymentOptions']) == 2
+    payment_decsription = contents['paymentOptions'][0]
+    assert payment_decsription['@context'].endswith('PaymentDescription.jsonld')
+    assert payment_decsription['via'] == '/debtors/3'
+    assert payment_decsription['amount'] == 1000
 
 
 def test_get_proof(client, offer, proof):
@@ -77,7 +82,7 @@ def test_get_proof(client, offer, proof):
     proof_secret = urlsafe_b64encode(proof.proof_secret).decode()
     r = client.get(f'/payment-proofs/{proof.payee_creditor_id}/{proof.proof_id}/{proof_secret}')
     assert r.status_code == 200
-    assert r.content_type == 'application/json'
+    assert r.content_type == 'application/ld+json'
     assert 'max-age=' in r.headers['Cache-Control']
     contents = json.loads(r.data)
     assert contents['@id'].endswith(f'/payment-proofs/{proof.payee_creditor_id}/{proof.proof_id}/{proof_secret}')
