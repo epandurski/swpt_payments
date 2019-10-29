@@ -64,7 +64,6 @@ def test_get_offer(client, offer):
     assert contents['offerDescription'] == offer.description
     assert len(contents['paymentOptions']) == 2
     payment_decsription = contents['paymentOptions'][0]
-    assert payment_decsription['@context'].endswith('PaymentDescription.jsonld')
     assert payment_decsription['via'] == '/debtors/3'
     assert payment_decsription['amount'] == 1000
 

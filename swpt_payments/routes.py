@@ -52,7 +52,6 @@ class OfferSchema(Schema, JsonLdMixin):
 
     def get_payment_options(self, obj):
         return [{
-            '@context': CONTEXT_PATH.format('PaymentDescription.jsonld'),
             '@type': 'PaymentDescription',
             'via': _get_debtor_url(debtor_id),
             'amount': amount or 0,
@@ -63,7 +62,6 @@ class OfferSchema(Schema, JsonLdMixin):
             return missing
         else:
             return {
-                '@context': CONTEXT_PATH.format('PaymentDescription.jsonld'),
                 '@type': 'PaymentDescription',
                 'via': _get_debtor_url(obj.reciprocal_payment_debtor_id),
                 'amount': obj.reciprocal_payment_amount,
@@ -94,7 +92,6 @@ class ProofSchema(Schema, JsonLdMixin):
             return missing
         else:
             return {
-                '@context': CONTEXT_PATH.format('PaymentDescription.jsonld'),
                 '@type': 'PaymentDescription',
                 'via': _get_debtor_url(obj.reciprocal_payment_debtor_id),
                 'amount': obj.reciprocal_payment_amount,
