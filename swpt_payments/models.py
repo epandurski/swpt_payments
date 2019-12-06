@@ -204,6 +204,7 @@ class PaymentOrder(db.Model):
         comment='The moment at which the payment order was finalized. NULL means that the '
                 'payment order has not been finalized yet.',
     )
+    __mapper_args__ = {'eager_defaults': True}
     __table_args__ = (
         db.Index(
             'idx_payment_coordinator_request_id',
