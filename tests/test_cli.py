@@ -6,13 +6,13 @@ from swpt_payments.extensions import db
 
 
 @pytest.fixture(scope='function')
-def offer():
+def offer(db_session):
     deadline = datetime(1900, 1, 1, tzinfo=timezone.utc)
     return p.create_formal_offer(1, 2, [3, 4], [1000, 2000], deadline, {'text': 'test'})
 
 
 @pytest.fixture(scope='function')
-def proof(offer):
+def proof(db_session, offer):
     payment_proof = PaymentProof(
         payee_creditor_id=offer.payee_creditor_id,
         proof_secret=b'123',
@@ -26,8 +26,8 @@ def proof(offer):
         offer_created_at_ts=offer.created_at_ts,
         offer_description=offer.description,
     )
-    db.session.add(payment_proof)
-    db.session.flush()
+    db_session.add(payment_proof)
+    db_session.flush()
     return payment_proof
 
 
