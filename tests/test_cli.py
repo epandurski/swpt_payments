@@ -2,7 +2,6 @@ import pytest
 from datetime import datetime, timezone
 from swpt_payments import procedures as p
 from swpt_payments.models import PaymentOrder, PaymentProof
-from swpt_payments.extensions import db
 
 
 @pytest.fixture(scope='function')
