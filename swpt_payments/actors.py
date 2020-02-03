@@ -196,3 +196,6 @@ def on_rejected_payment_transfer_signal(
         coordinator_request_id,
         details,
     )
+
+
+# TODO: Handle the `FinalizedTransferSignal` signal.

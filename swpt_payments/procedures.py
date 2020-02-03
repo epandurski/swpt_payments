@@ -162,6 +162,14 @@ def process_rejected_payment_transfer_signal(
         _abort_payment_order(po, abort_reason=details)
 
 
+# TODO: Make sure the implementations of
+# `process_rejected_payment_transfer_signal()` and
+# `process_prepared_payment_transfer_signal()` follow the protocol
+# defined by the "accounts" micro-service. Important note: the the
+# protocol has changed change since the current implementations were
+# finished.
+
+
 @atomic
 def process_prepared_payment_transfer_signal(
         debtor_id: int,
