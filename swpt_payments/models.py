@@ -21,7 +21,8 @@ class Signal(db.Model):
 
     # TODO: Define `send_signalbus_messages` class method, set
     #      `ModelClass.signalbus_autoflush = False` and
-    #      `ModelClass.signalbus_burst_count = N` in models.
+    #      `ModelClass.signalbus_burst_count = N` in models. Make sure
+    #      TTL is set properly for the messages.
 
     queue_name = None
 
@@ -49,6 +50,8 @@ class Signal(db.Model):
             options={},
         )
         broker.publish_message(message, exchange=MAIN_EXCHANGE_NAME, routing_key=routing_key)
+
+    inserted_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
 
 
 class FormalOffer(db.Model):
@@ -268,12 +271,6 @@ class PaymentProof(db.Model):
 class CreatedFormalOfferSignal(Signal):
     """Sent to the payee when a new offer has been created."""
 
-    payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
-    offer_id = db.Column(db.BigInteger, primary_key=True)
-    offer_announcement_id = db.Column(db.BigInteger, nullable=False)
-    offer_secret = db.Column(pg.BYTEA, nullable=False)
-    offer_created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
-
     class __marshmallow__(Schema):
         payee_creditor_id = fields.Integer()
         offer_id = fields.Integer()
@@ -281,9 +278,19 @@ class CreatedFormalOfferSignal(Signal):
         offer_secret = fields.Function(lambda obj: urlsafe_b64encode(obj.offer_secret).decode())
         offer_created_at_ts = fields.DateTime()
 
+    payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
+    offer_id = db.Column(db.BigInteger, primary_key=True)
+    offer_announcement_id = db.Column(db.BigInteger, nullable=False)
+    offer_secret = db.Column(pg.BYTEA, nullable=False)
+    offer_created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
+
 
 class CanceledFormalOfferSignal(Signal):
     """Sent to the payee when an offer has been canceled."""
+
+    class __marshmallow__(Schema):
+        payee_creditor_id = fields.Integer()
+        offer_id = fields.Integer()
 
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
@@ -292,6 +299,11 @@ class CanceledFormalOfferSignal(Signal):
 class FailedReciprocalPaymentSignal(Signal):
     """Sent to the payee when a reciprocal payment has failed."""
 
+    class __marshmallow__(Schema):
+        payee_creditor_id = fields.Integer()
+        offer_id = fields.Integer()
+        details = fields.Raw()
+
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
     details = db.Column(pg.JSON, nullable=False, default={})
@@ -299,6 +311,19 @@ class FailedReciprocalPaymentSignal(Signal):
 
 class SuccessfulPaymentSignal(Signal):
     """Sent to the payee and the payer when an offer has been paid."""
+
+    class __marshmallow__(Schema):
+        payee_creditor_id = fields.Integer()
+        offer_id = fields.Integer()
+        payer_creditor_id = fields.Integer()
+        payer_payment_order_seqnum = fields.Integer()
+        debtor_id = fields.Integer()
+        amount = fields.Integer()
+        payer_note = fields.Raw()
+        paid_at_ts = fields.DateTime()
+        reciprocal_payment_debtor_id = fields.Integer()
+        reciprocal_payment_amount = fields.Integer()
+        proof_id = fields.Integer()
 
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
@@ -323,6 +348,13 @@ class SuccessfulPaymentSignal(Signal):
 
 class FailedPaymentSignal(Signal):
     """Sent to the payer when a payment order has failed."""
+
+    class __marshmallow__(Schema):
+        payee_creditor_id = fields.Integer()
+        offer_id = fields.Integer()
+        payer_creditor_id = fields.Integer()
+        payer_payment_order_seqnum = fields.Integer()
+        details = fields.Raw()
 
     payee_creditor_id = db.Column(db.BigInteger, primary_key=True)
     offer_id = db.Column(db.BigInteger, primary_key=True)
