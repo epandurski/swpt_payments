@@ -6,6 +6,7 @@ swpt_payments
 
 Swaptacular micro-service that manages payments
 
+
 It implements several public `Dramatiq`_ actors (see
 ``swpt_payments/actors.py``), and a very simple web API (see
 ``swpt_payments/routes.py``).
